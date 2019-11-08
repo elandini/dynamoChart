@@ -253,6 +253,36 @@ class DynamoChartManager(QObject):
             self._yLogR.zoom(zoomDict["verse"])
 
 
+    ## Performs a pan on the x direction
+    # @param qPanXDict QJSValue: A dictionary containing the pan to perform as a normalized step and a code that represents the axes to perform the pan on
+    @Slot('QVariant')
+    def panX(self,qPanXDict):
+
+        if self._execLog:
+            print('{1}.panX called at\t{0}'.format(datetime.now(), type(self).__name__))
+        panXDict = qPanXDict.toVariant()
+        panCode = str(panXDict["code"])
+        panCode = "0"*(4-len(panCode))+panCode
+        for i in range(len(panCode)):
+            if panCode[i] == "1":
+                self._allXs[i].pan(panXDict["normDelta"])
+
+
+    ## Performs a pan on the y direction
+    # @param qPanYDict QJSValue: A dictionary containing the pan to perform as a normalized step and a code that represents the axes to perform the pan on
+    @Slot('QVariant')
+    def panY(self, qPanYDict):
+
+        if self._execLog:
+            print('{1}.panY called at\t{0}'.format(datetime.now(), type(self).__name__))
+        panYDict = qPanYDict.toVariant()
+        panCode = str(panYDict["code"])
+        panCode = "0" * (4 - len(panCode)) + panCode
+        for i in range(len(panCode)):
+            if panCode[i] == "1":
+                self._allYs[i].pan(panYDict["normDelta"])
+
+
     ## Replaces all series points with new ones
     # @param inputDict Dictionary: A dictionary containing the series index, an x value list and an y values one
     @Slot('QVariant')

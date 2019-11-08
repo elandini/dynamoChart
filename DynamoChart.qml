@@ -9,25 +9,33 @@ ChartView{
     property var currentSeries: {[]}
     property int autoScaleCodeX: 0
     property int autoScaleCodeY: 0
-    property int zoomCodeX: 0
-    property int zoomCodeY: 0
-    property int panCodeX: 0
-    property int panCodeY: 0
+    property int zoomCodeX: 1111
+    property int zoomCodeY: 1111
+    property int panCodeX: 1111
+    property int panCodeY: 1111
+    // codes are numbers going from 0 to 1111. They are formed this way:
+    //
     states: [
         State {
             name: "empty"
+            PropertyChanges { target: dynamoMenu; visible: false }
         },
         State {
             name: "plotting"
+            PropertyChanges { target: dynamoMenu; visible: true }
         },
         State {
             name: "measuring"
+            PropertyChanges { target: dynamoMenu; visible: false }
         },
         State {
             name: "filled"
+            PropertyChanges { target: dynamoMenu; visible: true }
         }
     ]
-
+    function setState(newState){
+        state = newState;
+    }
     function addNewSeries(params){
         var newSeries; // = createSeries(type,name);
         var theX;
@@ -56,7 +64,6 @@ ChartView{
         var toSend = params;
         params.series = newSeries;
         manager.addSeries(params);
-        seriesNum++;
         currentSeries.push(params.name);
 
         return newSeries
@@ -100,6 +107,8 @@ ChartView{
     function grabPlot(){
         if (state === "plotting" || state === "filled"){
             cursorShape = Qt.ClosedHandCursor;
+            dynamoMouse.oldX = dynamoMouse.mouseX;
+            dynamoMouse.oldY = dynamoMouse.mouseY;
         }
     }
     function dynamoZoom(verse){
@@ -226,6 +235,8 @@ ChartView{
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        property int oldX: 0
+        property int oldY: 0
 
         onClicked: {
             if (mouse.button == Qt.RightButton)// && manager.interactionEnabled) Commented since it's not compatible with the TestChartMng class
@@ -240,8 +251,18 @@ ChartView{
             parent.grabPlot();
         }
         onMouseXChanged: {
+            if(cursorShape === Qt.ClosedHandCursor){
+                var normDelta = (mouseX-oldX)/(parent.plotArea["width"]);
+                oldX = mouseX;
+                manager.panX({"normDelta":normDelta,"code":panCodeX});
+            }
         }
         onMouseYChanged: {
+            if(cursorShape === Qt.ClosedHandCursor){
+                var normDelta = (mouseY-oldY)/(parent.plotArea["height"]);
+                oldY = mouseY;
+                manager.panY({"normDelta":normDelta,"code":panCodeY});
+            }
         }
         onReleased: {
             cursorShape = Qt.ArrowCursor;
@@ -313,25 +334,69 @@ ChartView{
 
                 MenuSeparator { }
 
-                MenuItem {
-                    id: autoXMenuItem
-                    text: "Autoscale for X"
-                    checkable: true
-                    onCheckedChanged: {
-                        if (dynamoMouse.actOnXAuto){
-                            dynamoMouse.dynamoAutoScale()
-                        }
+                Menu {
+                    id: autoXMenu
+                    title: "X axes"
+
+                    MenuItem {
+                        id: autoXBMenuItem
+                        text: "Linear X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoXTMenuItem
+                        text: "Linear X top"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoLogXBMenuItem
+                        text: "Log X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoLogXTMenuItem
+                        text: "Log X top"
+                        checkable: true
+
                     }
                 }
 
-                MenuItem {
-                    id: autoYMenuItem
-                    text: "Autoscale for Y"
-                    checkable: true
-                    onCheckedChanged: {
-                        if (dynamoMouse.actOnYAuto){
-                            dynamoMouse.dynamoAutoScale()
-                        }
+                Menu {
+                    id: autoYMenu
+                    title: "Y axes"
+
+                    MenuItem {
+                        id: autoYLMenuItem
+                        text: "Linear Y left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoYRMenuItem
+                        text: "Linear Y right"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoLogYLMenuItem
+                        text: "Log Y Left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: autoLogYRMenuItem
+                        text: "Log Y right"
+                        checkable: true
+
                     }
                 }
             }
@@ -340,18 +405,70 @@ ChartView{
                 id: dynamoZoomMenu
                 title: "Zoom options"
 
-                MenuItem {
-                    id: lxzMenuItem
-                    text: "Zoom only on X"
-                    checkable: true
-                    visible: dynamoMouse.responsiveX
+                Menu {
+                    id: zoomXMenu
+                    title: "X axes"
+
+                    MenuItem {
+                        id: zoomXBMenuItem
+                        text: "Linear X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomXTMenuItem
+                        text: "Linear X top"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomLogXBMenuItem
+                        text: "Log X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomLogXTMenuItem
+                        text: "Log X top"
+                        checkable: true
+
+                    }
                 }
 
-                MenuItem {
-                    id: lyzMenuItem
-                    text: "Zoom only on Y"
-                    checkable: true
-                    visible: dynamoMouse.responsiveY
+                Menu {
+                    id: zoomYMenu
+                    title: "Y axes"
+
+                    MenuItem {
+                        id: zoomYLMenuItem
+                        text: "Linear Y left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomYRMenuItem
+                        text: "Linear Y right"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomLogYLMenuItem
+                        text: "Log Y Left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: zoomLogYRMenuItem
+                        text: "Log Y right"
+                        checkable: true
+
+                    }
                 }
             }
 
@@ -359,18 +476,70 @@ ChartView{
                 id: dynamoTransMenu
                 title: "Translation options"
 
-                MenuItem {
-                    id: lxrMenuItem
-                    text: "Move only on X"
-                    checkable: true
-                    visible: dynamoMouse.responsiveX
+                Menu {
+                    id: panXMenu
+                    title: "X axes"
+
+                    MenuItem {
+                        id: panXBMenuItem
+                        text: "Linear X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panXTMenuItem
+                        text: "Linear X top"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panLogXBMenuItem
+                        text: "Log X bottom"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panLogXTMenuItem
+                        text: "Log X top"
+                        checkable: true
+
+                    }
                 }
 
-                MenuItem {
-                    id: lyrMenuItem
-                    text: "Move only on Y"
-                    checkable: true
-                    visible: dynamoMouse.responsiveY
+                Menu {
+                    id: panYMenu
+                    title: "Y axes"
+
+                    MenuItem {
+                        id: panYLMenuItem
+                        text: "Linear Y left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panYRMenuItem
+                        text: "Linear Y right"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panLogYLMenuItem
+                        text: "Log Y Left"
+                        checkable: true
+
+                    }
+
+                    MenuItem {
+                        id: panLogYRMenuItem
+                        text: "Log Y right"
+                        checkable: true
+
+                    }
                 }
             }
 

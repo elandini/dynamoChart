@@ -142,8 +142,8 @@ class DynamoAxisManager(QObject):
 
 
     ## Shifts the axis range
-    # @param delta Double: The shit amplitude
-    def pan(self,delta):
+    # @param nDelta Double: The normalized shift amplitude
+    def pan(self,nDelta):
 
         if self._execLog:
             print('{1}.pan called at\t{0}'.format(datetime.now(), type(self).__name__))
@@ -152,6 +152,7 @@ class DynamoAxisManager(QObject):
             return
 
         limits = self.getRange()
+        delta = nDelta*(limits[1]-limits[0])
         self.setRange([limits[0]+delta,limits[1]+delta])
 
 
