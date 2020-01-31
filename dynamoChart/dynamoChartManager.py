@@ -1,11 +1,9 @@
-from PySide2.QtCore import QObject, Signal, Slot, Property, QThread, QPointF
+from PySide2.QtCore import QObject, Signal, Slot, Property, QPointF
 from PySide2.QtCharts import QtCharts
 import numpy as np
-from random import random, randrange
-from time import sleep
 from datetime import datetime
 
-from dynamoAxisManager import DynamoAxisManager
+from dynamoChart.dynamoAxisManager import DynamoAxisManager
 
 STRIP = True
 #STRIP = False

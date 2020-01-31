@@ -17,25 +17,24 @@ ChartView{
     //
     states: [
         State {
-            name: "empty"
+            name: "empty" //This state is used to
             PropertyChanges { target: dynamoMenu; visible: false }
         },
         State {
-            name: "plotting"
-            PropertyChanges { target: dynamoMenu; visible: true }
-        },
-        State {
-            name: "measuring"
+            name: "measuring" // This is the state to be used when new points are fed to the plot
             PropertyChanges { target: dynamoMenu; visible: false }
         },
         State {
-            name: "filled"
+            name: "filled" // This state has to be used when the plot has been filled and no other point is going to be added
             PropertyChanges { target: dynamoMenu; visible: true }
         }
     ]
+    // Sets the chart state
     function setState(newState){
         state = newState;
     }
+    // Adds a series to the chart
+    // @param params Dictionary:
     function addNewSeries(params){
         var newSeries; // = createSeries(type,name);
         var theX;
@@ -339,6 +338,16 @@ ChartView{
                     title: "X axes"
 
                     MenuItem {
+                        id: autoXMenuItem
+                        text: "Enable all X"
+                        onTriggered: {
+                           dynamoMouse.dynamoGlobalAutoScale();
+                        }
+                    }
+
+                    MenuSeparator { }
+
+                    MenuItem {
                         id: autoXBMenuItem
                         text: "Linear X bottom"
                         checkable: true
@@ -370,6 +379,16 @@ ChartView{
                 Menu {
                     id: autoYMenu
                     title: "Y axes"
+
+                    MenuItem {
+                        id: autoYMenuItem
+                        text: "Enable all Y"
+                        onTriggered: {
+                           dynamoMouse.dynamoGlobalAutoScale();
+                        }
+                    }
+
+                    MenuSeparator { }
 
                     MenuItem {
                         id: autoYLMenuItem
@@ -405,9 +424,29 @@ ChartView{
                 id: dynamoZoomMenu
                 title: "Zoom options"
 
+                MenuItem {
+                    id: zoomMenuItem
+                    text: "Enable zoom"
+                    onTriggered: {
+                       dynamoMouse.dynamoGlobalAutoScale();
+                    }
+                }
+
+                MenuSeparator { }
+
                 Menu {
                     id: zoomXMenu
                     title: "X axes"
+
+                    MenuItem {
+                        id: zoomXMenuItem
+                        text: "Enable all X"
+                        onTriggered: {
+                           dynamoMouse.dynamoGlobalAutoScale();
+                        }
+                    }
+
+                    MenuSeparator { }
 
                     MenuItem {
                         id: zoomXBMenuItem
@@ -443,6 +482,16 @@ ChartView{
                     title: "Y axes"
 
                     MenuItem {
+                        id: zoomYMenuItem
+                        text: "Enable all Y"
+                        onTriggered: {
+                           dynamoMouse.dynamoGlobalAutoScale();
+                        }
+                    }
+
+                    MenuSeparator { }
+
+                    MenuItem {
                         id: zoomYLMenuItem
                         text: "Linear Y left"
                         checkable: true
@@ -473,12 +522,32 @@ ChartView{
             }
 
             Menu {
-                id: dynamoTransMenu
-                title: "Translation options"
+                id: dynamoPanMenu
+                title: "Pan options"
+
+                MenuItem {
+                    id: panMenuItem
+                    text: "Enable pan"
+                    onTriggered: {
+                       dynamoMouse.dynamoGlobalAutoScale();
+                    }
+                }
+
+                MenuSeparator { }
 
                 Menu {
                     id: panXMenu
                     title: "X axes"
+
+                    MenuItem {
+                        id: panXMenuItem
+                        text: "Enable all X"
+                        onTriggered: {
+                           dynamoMouse.dynamoGlobalAutoScale();
+                        }
+                    }
+
+                    MenuSeparator { }
 
                     MenuItem {
                         id: panXBMenuItem
