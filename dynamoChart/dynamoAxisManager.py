@@ -27,6 +27,7 @@ class DynamoAxisManager(QObject):
         self._scaleFactor = scalefactor
         self._innerAxis = inneraxis
         self._firstRound = True
+        self._autoScaling = False
         self._registeredSeries = {}  # A dictionary with the following structure:
         #                               - key = registered series name (string)
         #                               - value = series object (QAbstractSeries) + does the series use the axis as an X axis (boolean)? It's a list
@@ -187,7 +188,7 @@ class DynamoAxisManager(QObject):
             print('{1}.used called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         if self._innerAxis is None:
-            return
+            return False
 
         return len(self._registeredSeries) >= 1
 
@@ -384,6 +385,27 @@ class DynamoAxisManager(QObject):
             print('{1}.prepareForAutoscale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         self._firstRound = True
+
+
+    ## Returns whether or not the manager is autoScaling the axis
+    @property
+    def autoscaling(self):
+
+        if self._execLog:
+            print('{1}.autoscaling called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._autoScaling
+
+
+    ## Sets the autoscaling property
+    # @param value Boolen: The value to set
+    @autoscaling.setter
+    def autoscaling(self,value):
+
+        if self._execLog:
+            print('{1}.autoscaling called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        self._autoScaling = value
 
     # ------------------------------------------------------------------------------- #
 

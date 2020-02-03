@@ -7,17 +7,15 @@ ChartView{
     focus: true
     property var manager
     property var currentSeries: {[]}
-    property int autoScaleCodeX: 0
-    property int autoScaleCodeY: 0
-    property int zoomCodeX: 1111
-    property int zoomCodeY: 1111
-    property int panCodeX: 1111
-    property int panCodeY: 1111
     // codes are numbers going from 0 to 1111. They are formed this way:
     //
     states: [
         State {
-            name: "empty" //This state is used to
+            name: "empty" //This state is used when the plot is empty. It has no series
+            PropertyChanges { target: dynamoMenu; visible: false }
+        },
+        State {
+            name: "initialized" //This state is used when the plot is empty. It has series but they are empty
             PropertyChanges { target: dynamoMenu; visible: false }
         },
         State {
@@ -101,7 +99,7 @@ ChartView{
         dynamoMouse.actOnYAuto = true;
         lxrMenuItem.checked = false;
         lyrMenuItem.checked = false;
-        interactive = switchOn;
+        manager.interactionEnabled = switchOn;
     }
     function grabPlot(){
         if (state === "plotting" || state === "filled"){
@@ -238,7 +236,7 @@ ChartView{
         property int oldY: 0
 
         onClicked: {
-            if (mouse.button == Qt.RightButton)// && manager.interactionEnabled) Commented since it's not compatible with the TestChartMng class
+            if (mouse.button == Qt.RightButton && manager.interactionEnabled) //Commented since it's not compatible with the TestChartMng class
             {
                 dynamoMenu.popup();
             }

@@ -16,6 +16,7 @@ class DynamoChartManager(QObject):
     axisDone = Signal()
     axisChanged = Signal()
     interactionEnableChanged = Signal()
+    addingSeries = Signal('QVariant')
 
     # ------------------------------------------------------------------------------- #
 
@@ -48,10 +49,8 @@ class DynamoChartManager(QObject):
         self._yR.setObjectName("yR")
         self._yLogL.setObjectName("yLogL")
         self._yLogR.setObjectName("yLogR")
-        self._allXs = [self._xB,self._xT,self._xLogB,self._xLogT]
-        self._allYs = [self._yL,self._yR,self._yLogL,self._yLogR]
-        self._autoX = False
-        self._autoY = False
+        self._assignedX = {}
+        self._assignedY = {}
         self._axisAssigned = False
         self._stripChart = False
         self._interactionEnabled = True
@@ -93,10 +92,10 @@ class DynamoChartManager(QObject):
     ## Manages the autoscaling of a single axis
     # @param manager DynamoAxisManager: The axis to manage
     # @param seriesName String: The series to set scale on
-    def checkManagerScale(self, manager, seriesName):
+    def singleAxisAutoscale(self, manager, seriesName):
 
         if self._execLog:
-            print('{1}.checkManagerScale called at\t{0}'.format(datetime.now(), type(self).__name__))
+            print('{1}.singleAxisAutoscale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         if manager.getFirstRound():
             manager.adaptToSeries(seriesName)
@@ -106,48 +105,82 @@ class DynamoChartManager(QObject):
 
     ## Performs an autoscaling around a specific series
     # @param seriesName String: The series to set scale on
-    def checkSeriesScale(self,seriesName):
+    def seriesWiseAutoscale(self,seriesName):
 
         if self._execLog:
-            print('{1}.checkSeriesScale called at\t{0}'.format(datetime.now(), type(self).__name__))
+            print('{1}.seriesWiseAutoscale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        if self._autoX:
-            for m in self._allXs:
-                if m.registered(seriesName):
-                    self.checkManagerScale(m,seriesName)
-        if self._autoY:
-            for m in self._allYs:
-                if m.registered(seriesName):
-                    self.checkManagerScale(m,seriesName)
-
-        if self._autoY or self._autoX:
-            self.fixAxis()
+        for kx in self._assignedX.keys():
+            if self._assignedX[kx].autoscaling:
+                self.singleAxisAutoscale(self._assignedX[kx],seriesName)
+                self._assignedX[kx].fixAxis()
+        for ky in self._assignedY.keys():
+            if self._assignedY[ky].autoscaling:
+                self.singleAxisAutoscale(self._assignedY[ky],seriesName)
+                self._assignedY[ky].fixAxis()
 
 
     ## Performs an autoscale operation on a particular axis when a new point is added or removed
     # @param manager DynamoAxisManager: The axis to manage
-    def checkManagerPointScale(self,manager):
+    def singleAxisPointScale(self,manager):
 
         if self._execLog:
-            print('{1}.checkManagerPointScale called at\t{0}'.format(datetime.now(), type(self).__name__))
+            print('{1}.singleAxisPointScale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         manager.autoScalePoint()
 
 
     ## Checks whether or not a point added changes the x and y axis scale when on autoscale
     # @param seriesName String: The series the point has been added to
-    # @param x Float: Point x value
-    # @param y Float: Point y value
-    def checkPointScale(self,seriesName,x,y):
+    def pointWiseAutoscale(self,seriesName):
 
-        if self._autoX:
-            for m in self._allXs:
-                if m.registered(seriesName):
-                    self.checkManagerPointScale(m)
-        if self._autoY:
-            for m in self._allYs:
-                if m.registered(seriesName):
-                    self.checkManagerPointScale(m)
+        if self._execLog:
+            print('{1}.pointwiseAutoscale called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        for kx in self._assignedX.keys():
+            if self._assignedX[kx].autoscaling:
+                self.singleAxisPointScale(self._assignedX[kx])
+                self._assignedX[kx].fixAxis()
+        for ky in self._assignedY.keys():
+            if self._assignedY[ky].autoscaling:
+                self.singleAxisPointScale(self._assignedY[ky])
+                self._assignedY[ky].fixAxis()
+
+
+    ## Returns the axis managed by the provided manager
+    # @param manager DynamoAxisManager: The wanted manager
+    def _getManagedAxis(self,manager):
+
+        if self._execLog:
+            print('{1}._getManagedAxis called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return manager.getInnerAxis()
+
+
+    ## Sets the axis managed by the provided manager
+    # @param manager DynamoAxisManager: The wanted manager
+    # @param managed AbstractAxis: The axis to set
+    # @param isX Boolean: If True the axis is an X axis, if False is an Y one
+    def _setManagedAxis(self,manager, managed, isX):
+
+        if self._execLog:
+            print('{1}._setManagedAxis called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        if managed == manager.getInnerAxis():
+            return
+        if manager.getInnerAxis() is not None:
+            if isX:
+                self._assignedX.pop(manager.getInnerAxis().objectName())
+                self._assignedX[managed.objectName()] = manager
+            else:
+                self._assignedY.pop(manager.getInnerAxis().objectName())
+                self._assignedY[managed.objectName()] = manager
+        else:
+            if isX:
+                self._assignedX[managed.objectName()] = manager
+            else:
+                self._assignedY[managed.objectName()] = manager
+        manager.setInnerAxis(managed)
 
     # ------------------------------------------------------------------------------- #
 
@@ -160,95 +193,105 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.clear called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        for a in self._allXs:
-            a.clearAxis()
-        for a in self._allYs:
-            a.clearAxis()
+        for k in self._assignedX.keys():
+            self._assignedX[k].clearAxis()
+        for k in self._assignedY.keys():
+            self._assignedY[k].clearAxis()
         self._seriesDict = {}
+
+
+    ## It fixes a set of selected axes
+    # @param qAxesSet QJSValue: The dictionary containing the axis to fix
+    @Slot('QVariant')
+    def fixAxes(self,qAxesSet):
+
+        if self._execLog:
+            print('{1}.fixAxes called at\t{0}'.format(datetime.now(), type(self).__name__))
+        axesSet = qAxesSet.toVariant()
+
+        for k in axesSet.keys():
+            if axesSet[k] == "x":
+                self._assignedX[k].fixAxis()
+            else:
+                self._assignedY[k].fixAxis()
 
 
     ## Uses current axes limits as default zoom level
     @Slot()
-    def fixAxis(self):
+    def fixAllAxes(self):
 
-        self._xB.fixAxis()
-        self._yL.fixAxis()
-        self._xT.fixAxis()
-        self._yR.fixAxis()
-        self._xLogB.fixAxis()
-        self._yLogL.fixAxis()
-        self._xLogT.fixAxis()
-        self._yLogR.fixAxis()
+        if self._execLog:
+            print('{1}.fixAllAxes called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        for k in self._assignedX.keys():
+            self._assignedX[k].fixAxis()
+        for k in self._assignedY.keys():
+            self._assignedY[k].fixAxis()
 
 
     ## Sets all the axes to their default values
     @Slot()
-    def resetAxis(self):
+    def resetAllAxis(self):
 
-        self._xB.resetAxis()
-        self._yL.resetAxis()
-        self._xT.resetAxis()
-        self._yR.resetAxis()
-        self._xLogB.resetAxis()
-        self._yLogL.resetAxis()
-        self._xLogT.resetAxis()
-        self._yLogR.resetAxis()
+        if self._execLog:
+            print('{1}.resetAllAxis called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        for k in self._assignedX.keys():
+            self._assignedX[k].resetAxis()
+        for k in self._assignedY.keys():
+            self._assignedY[k].resetAxis()
+
+
+    ## Sends the info needed to add a series to the managed QML object
+    # @param seriesFeatures Dictionary: The new series features
+    @Slot(dict)
+    def addSeries(self,seriesFeatures):
+
+        if self._execLog:
+            print('{1}.addSeries called at\t{0}'.format(datetime.now(), type(self).__name__))
+        self.addingSeries.emit(seriesFeatures)
 
 
     ## Adds a series to the chart
-    # @param seriesFeatures Dictionary: A dictionary containing all the features of the series to add
-    @Slot(dict)
-    def addSeries(self,test):
+    # @param qSeriesFeatures QJSValue: A dictionary containing all the features of the series to add
+    @Slot('QVariant')
+    def registerSeries(self,qSeriesFeatures):
+        
+        if self._execLog:
+            print('{1}.registerSeries called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        testDict = test.toVariant()
+        seriesFeatures = qSeriesFeatures.toVariant()
 
-        self._seriesDict[testDict["series"].name()] = testDict["series"]
-        if testDict["bottom"]:
-            if testDict["plotType"] == "loglog" or testDict["plotType"] == "loglin":
-                self._xLogB.addSeries(testDict["series"],True)
+        self._seriesDict[seriesFeatures["series"].name()] = seriesFeatures["series"]
+        if seriesFeatures["bottom"]:
+            if seriesFeatures["plotType"] == "loglog" or seriesFeatures["plotType"] == "loglin":
+                self._xLogB.addSeries(seriesFeatures["series"],True)
             else:
-                self._xB.addSeries(testDict["series"],True)
+                self._xB.addSeries(seriesFeatures["series"],True)
         else:
-            if testDict["plotType"] == "loglog" or testDict["plotType"] == "loglin":
-                self._xLogT.addSeries(testDict["series"],True)
+            if seriesFeatures["plotType"] == "loglog" or seriesFeatures["plotType"] == "loglin":
+                self._xLogT.addSeries(seriesFeatures["series"],True)
             else:
-                self._xT.addSeries(testDict["series"],True)
-        if testDict["left"]:
-            if testDict["plotType"] == "loglog" or testDict["plotType"] == "linlog":
-                self._yLogL.addSeries(testDict["series"],False)
+                self._xT.addSeries(seriesFeatures["series"],True)
+        if seriesFeatures["left"]:
+            if seriesFeatures["plotType"] == "loglog" or seriesFeatures["plotType"] == "linlog":
+                self._yLogL.addSeries(seriesFeatures["series"],False)
             else:
-                self._yL.addSeries(testDict["series"],False)
+                self._yL.addSeries(seriesFeatures["series"],False)
         else:
-            if testDict["plotType"] == "loglog" or testDict["plotType"] == "linlog":
-                self._yLogR.addSeries(testDict["series"],False)
+            if seriesFeatures["plotType"] == "loglog" or seriesFeatures["plotType"] == "linlog":
+                self._yLogR.addSeries(seriesFeatures["series"],False)
             else:
-                self._yR.addSeries(testDict["series"],False)
+                self._yR.addSeries(seriesFeatures["series"],False)
 
 
     @Slot('QVariant')
     def zoom(self,qZoomDict):
+        
+        if self._execLog:
+            print('{1}.zoom called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         zoomDict = qZoomDict.toVariant()
-
-        if zoomDict["direction"] == "both":
-            self._xB.zoom(zoomDict["verse"])
-            self._xLogB.zoom(zoomDict["verse"])
-            self._xT.zoom(zoomDict["verse"])
-            self._xLogT.zoom(zoomDict["verse"])
-            self._yL.zoom(zoomDict["verse"])
-            self._yLogL.zoom(zoomDict["verse"])
-            self._yR.zoom(zoomDict["verse"])
-            self._yLogR.zoom(zoomDict["verse"])
-        elif zoomDict["direction"] == "x":
-            self._xB.zoom(zoomDict["verse"])
-            self._xLogB.zoom(zoomDict["verse"])
-            self._xT.zoom(zoomDict["verse"])
-            self._xLogT.zoom(zoomDict["verse"])
-        elif zoomDict["direction"] == "y":
-            self._yL.zoom(zoomDict["verse"])
-            self._yLogL.zoom(zoomDict["verse"])
-            self._yR.zoom(zoomDict["verse"])
-            self._yLogR.zoom(zoomDict["verse"])
 
 
     ## Performs a pan on the x direction
@@ -259,11 +302,6 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.panX called at\t{0}'.format(datetime.now(), type(self).__name__))
         panXDict = qPanXDict.toVariant()
-        panCode = str(panXDict["code"])
-        panCode = "0"*(4-len(panCode))+panCode
-        for i in range(len(panCode)):
-            if panCode[i] == "1":
-                self._allXs[i].pan(panXDict["normDelta"])
 
 
     ## Performs a pan on the y direction
@@ -274,11 +312,6 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.panY called at\t{0}'.format(datetime.now(), type(self).__name__))
         panYDict = qPanYDict.toVariant()
-        panCode = str(panYDict["code"])
-        panCode = "0" * (4 - len(panCode)) + panCode
-        for i in range(len(panCode)):
-            if panCode[i] == "1":
-                self._allYs[i].pan(panYDict["normDelta"])
 
 
     ## Replaces all series points with new ones
@@ -296,7 +329,7 @@ class DynamoChartManager(QObject):
             point = QPointF(newX[i], newY[i])
             points.append(point)
         self._seriesDict[inputDict["index"]].replace(points)
-        self.checkSeriesScale(inputDict["index"])
+        self.seriesWiseAutoscale(inputDict["index"])
         self._stillDrawing = False
 
 
@@ -310,8 +343,7 @@ class DynamoChartManager(QObject):
             if self._stripChart:
                 if self._seriesDict[k].count() > self._stripPoints:
                     self._seriesDict[k].remove(0)
-            if self._autoY or self._autoX:
-                self.checkPointScale(k,*newPointsDict[k])
+            self.pointWiseAutoscale(k)
 
 
     ## Sets the autoscale values
@@ -320,14 +352,6 @@ class DynamoChartManager(QObject):
     def setAutoScale(self,qAutoscaleValDict):
 
         autoScaleValDict = qAutoscaleValDict.toVariant()
-        self._autoX = autoScaleValDict["x"]
-        self._autoY = autoScaleValDict["y"]
-        if self._autoX:
-            for m in self._allXs:
-                m.prepareForAutoscale()
-        if self._autoY:
-            for m in self._allYs:
-                m.prepareForAutoscale()
 
 
     ## Sets whether or not the chart has to behave as a strip chart and the number of points for the chart
@@ -361,27 +385,80 @@ class DynamoChartManager(QObject):
         return self._interactionEnabled
 
 
+    ## Returns the axis managed by _xB
     def xBottom(self):
+
+        if self._execLog:
+            print('{1}.xBottom called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         return self._xB.getInnerAxis()
 
 
+    ## Returns the axis managed by _yL
     def yLeft(self):
+
+        if self._execLog:
+            print('{1}.yLeft called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         return self._yL.getInnerAxis()
 
 
+    ## Returns the axis managed by _xT
     def xTop(self):
+
+        if self._execLog:
+            print('{1}.xTop called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         return self._xT.getInnerAxis()
 
 
+    ## Returns the axis managed by _yR
     def yRight(self):
+
+        if self._execLog:
+            print('{1}.yRight called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         return self._yR.getInnerAxis()
 
 
+    ## Returns the axis managed by _xLogB
+    def xLogBottom(self):
+
+        if self._execLog:
+            print('{1}.xLogBottom called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._xLogB.getInnerAxis()
+
+
+    ## Returns the axis managed by _yLogL
+    def yLogLeft(self):
+
+        if self._execLog:
+            print('{1}.yLogLeft called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._yLogL.getInnerAxis()
+
+
+    ## Returns the axis managed by _xLogT
+    def xLogTop(self):
+
+        if self._execLog:
+            print('{1}.xLogTop called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._xLogT.getInnerAxis()
+
+
+    ## Returns the axis managed by _yLogR
+    def yLogRight(self):
+
+        if self._execLog:
+            print('{1}.yLogRight called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._yLogR.getInnerAxis()
+
+
     ## Sets self._axisAssigned value
+    # @param value Boolean: The value to assign
     def setAxisAssigned(self,value):
 
         if self._execLog:
@@ -392,6 +469,7 @@ class DynamoChartManager(QObject):
 
 
     ## Sets self._interactionEnabled value
+    # @param value Boolean: The value to assign
     def setInteractionEnabled(self, value):
 
         if self._execLog:
@@ -401,88 +479,84 @@ class DynamoChartManager(QObject):
         self._interactionEnabled = value
 
 
+    ## Sets the axis managed by _xB
+    # @param x ValueAxis: The axis to manage
     def setXBottom(self,x):
 
-        if x == self._xB.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setXBottom called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._xB.setInnerAxis(x)
+        self._setManagedAxis(self._xB,x,True)
 
 
+    ## Sets the axis managed by _yL
+    # @param y ValueAxis: The axis to manage
     def setYLeft(self, y):
 
-        if y == self._yL.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setYLeft called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._yL.setInnerAxis(y)
+        self._setManagedAxis(self._yL,y,False)
 
 
+    ## Sets the axis managed by _xT
+    # @param x ValueAxis: The axis to manage
     def setXTop(self,x):
 
-        if x == self._xT.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setXTop called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._xT.setInnerAxis(x)
+        self._setManagedAxis(self._xT,x,True)
 
 
+    ## Sets the axis managed by _yR
+    # @param y ValueAxis: The axis to manage
     def setYRight(self, y):
 
-        if y == self._yR.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setYRight called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._yR.setInnerAxis(y)
-
-
-    def xLogBottom(self):
-
-        return self._xLogB.getInnerAxis()
+        self._setManagedAxis(self._yR,y,False)
 
 
-    def yLogLeft(self):
-
-        return self._yLogL.getInnerAxis()
-
-
-    def xLogTop(self):
-
-        return self._xLogT.getInnerAxis()
-
-
-    def yLogRight(self):
-
-        return self._yLogR.getInnerAxis()
-
-
+    ## Sets the axis managed by _xLogB
+    # @param x LogValueAxis: The axis to manage
     def setXLogBottom(self,x):
 
-        if x == self._xLogB.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setXLogBottom called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._xLogB.setInnerAxis(x)
+        self._setManagedAxis(self._xLogB,x,True)
 
 
+    ## Sets the axis managed by _yLogL
+    # @param y LogValueAxis: The axis to manage
     def setYLogLeft(self, y):
 
-        if y == self._yLogL.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setYLogLeft called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._yLogL.setInnerAxis(y)
+        self._setManagedAxis(self._yLogL,y,False)
 
 
+    ## Sets the axis managed by _xLogT
+    # @param x LogValueAxis: The axis to manage
     def setXLogTop(self,x):
 
-        if x == self._xLogT.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setXLogTop called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._xLogT.setInnerAxis(x)
+        self._setManagedAxis(self._xLogT,x,True)
 
 
+    ## Sets the axis managed by _yLogR
+    # @param y LogValueAxis: The axis to manage
     def setYLogRight(self, y):
 
-        if y == self._yLogR.getInnerAxis():
-            return
+        if self._execLog:
+            print('{1}.setYLogRight called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._yLogR.setInnerAxis(y)
+        self._setManagedAxis(self._yLogR,y,False)
 
     # ------------------------------------------------------------------------------- #
 
