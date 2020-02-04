@@ -26,6 +26,7 @@ ApplicationWindow {
                 id: dynamoTest
                 Layout.fillHeight: true
                 Layout.fillWidth: true
+                manager: ChartMng
             }
 
             ColumnLayout{
@@ -39,7 +40,6 @@ ApplicationWindow {
                     id: button1Spacer
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.maximumWidth: saveParamsBtn.height
                     Pane { anchors.fill: parent; Material.background: "transparent" }
                 }
 
@@ -58,7 +58,6 @@ ApplicationWindow {
                     id: button2Spacer
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.maximumWidth: saveParamsBtn.height
                     Pane { anchors.fill: parent; Material.background: "transparent" }
                 }
 
@@ -69,6 +68,11 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.maximumHeight: width
                     text: "S"
+                    onClicked: function(){
+                        var x = [1,2,3,4];
+                        ChartMng.prova(x);
+                        console.log(JSON.stringify(x));
+                    }
                 }
 
                 Item {
@@ -76,7 +80,6 @@ ApplicationWindow {
                     id: button3Spacer
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.maximumWidth: saveParamsBtn.height
                     Pane { anchors.fill: parent; Material.background: "transparent" }
                 }
 

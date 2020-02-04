@@ -60,7 +60,7 @@ ChartView{
         newSeries.color = params.color;
         var toSend = params;
         params.series = newSeries;
-        manager.addSeries(params);
+        manager.registerSeries(params);
         currentSeries.push(params.name);
 
         return newSeries
@@ -70,7 +70,7 @@ ChartView{
             addNewSeries(seriesContainer["seriesList"][s]);
         }
     }
-    function associateAxis(){
+    function managerAssociation(){
         manager.xBottom = xAxisB;
         manager.yLeft = yAxisL;
         manager.xTop = xAxisT;
@@ -82,6 +82,7 @@ ChartView{
         manager.yLogRight = yLogAxisR;
 
         manager.axisAssigned = true;
+        manager.addingSeries.connect(addNewSeries);
     }
     function smartClear(){
         manager.clear();
@@ -89,17 +90,6 @@ ChartView{
             var toRemove = series(currentSeries[s]);
             removeSeries(toRemove);
         }
-    }
-    function switchRemote(switchOn){
-        dynamoMouse.actOnXAuto = false;
-        dynamoMouse.actOnYAuto = false;
-        autoXMenuItem.checked = false;
-        autoYMenuItem.checked = false;
-        dynamoMouse.actOnXAuto = true;
-        dynamoMouse.actOnYAuto = true;
-        lxrMenuItem.checked = false;
-        lyrMenuItem.checked = false;
-        manager.interactionEnabled = switchOn;
     }
     function grabPlot(){
         if (state === "plotting" || state === "filled"){
@@ -109,31 +99,7 @@ ChartView{
         }
     }
     function dynamoZoom(verse){
-        var mouseP = Qt.point(mouseX, mouseY);
-        var mouseMapped = parent.mapToValue(mouseP, parent.series(seriesNum-1));
-        var toSend = {"verse": verse,
-            "mouseX": mouseMapped.x,
-            "mouseY": mouseMapped.y,"direction":""};
-        if(onX && !onY && responsiveX){
-            toSend["direction"] = "x";
-        }
-        else if(onY && !onX && responsiveY){
-            toSend["direction"] = "y";
-        }
-        else if(onX && onY && (responsiveX || responsiveY)){
-            if(responsiveX && !responsiveY){
-                toSend["direction"] = "x";
-            }
-            else if(responsiveY && !responsiveX){
-                toSend["direction"] = "y";
-            }
-            else{
-                toSend["direction"] = "both";
-            }
-        }
-        else {
-            return;
-        }
+        var toSend = {"verse": verse};
         manager.zoom(toSend);
     }
 
@@ -242,7 +208,7 @@ ChartView{
             }
         }
         onDoubleClicked: {
-            manager.resetAxis();
+            manager.resetAllAxis();
         }
         onPressAndHold: {
             parent.grabPlot();
@@ -251,14 +217,14 @@ ChartView{
             if(cursorShape === Qt.ClosedHandCursor){
                 var normDelta = (mouseX-oldX)/(parent.plotArea["width"]);
                 oldX = mouseX;
-                manager.panX({"normDelta":normDelta,"code":panCodeX});
+                manager.panX({"normDelta":normDelta});
             }
         }
         onMouseYChanged: {
             if(cursorShape === Qt.ClosedHandCursor){
                 var normDelta = (mouseY-oldY)/(parent.plotArea["height"]);
                 oldY = mouseY;
-                manager.panY({"normDelta":normDelta,"code":panCodeY});
+                manager.panY({"normDelta":normDelta});
             }
         }
         onReleased: {
@@ -273,49 +239,19 @@ ChartView{
             }
         }
 
-        function dynamoAutoScale(){
-            responsiveX = !autoXMenuItem.checked;
-            responsiveY = !autoYMenuItem.checked;
-            lxzMenuItem.checked = false;
-            lyzMenuItem.checked = false;
-            lxrMenuItem.checked = false;
-            lyrMenuItem.checked = false;
-            var toSend = {"x":autoXMenuItem.checked,"y":autoYMenuItem.checked};
-            manager.setAutoScale(toSend);
-            if (!(autoXMenuItem.checked || autoYMenuItem.checked)){
-                autoMenuItem.text = "Enable autoscale";
-            }
-            else{
-                autoMenuItem.text = "Disable autoscale";
-            }
-        }
-        function dynamoGlobalAutoScale(){
-            if (autoMenuItem.text == "Enable autoscale"){
-                dynamoMouse.actOnXAuto = false;
-                dynamoMouse.actOnYAuto = false;
-                autoXMenuItem.checked = true;
-                autoYMenuItem.checked = true;
-                dynamoMouse.dynamoAutoScale();
-                dynamoMouse.actOnXAuto = true;
-                dynamoMouse.actOnYAuto = true;
-                autoMenuItem.text = "Disable autoscale";
-            }
-            else{
-                dynamoMouse.actOnXAuto = false;
-                dynamoMouse.actOnYAuto = false;
-                autoXMenuItem.checked = false;
-                autoYMenuItem.checked = false;
-                dynamoMouse.dynamoAutoScale();
-                dynamoMouse.actOnXAuto = true;
-                dynamoMouse.actOnYAuto = true;
-                autoMenuItem.text = "Enable autoscale";
-            }
-        }
-
         Menu {
             id: dynamoMenu
             Material.accent: Material.Orange
             Material.primary: Material.BlueGrey
+            property bool singleTriggers: true
+            property bool panTrigger: true
+            property bool zoomTrigger: true
+
+            function allAutoTriggers(value){
+                singleTriggers = false;
+                autoXMenuItem.text = "Disable all X";
+                autoYMenuItem.text = "Disable all Y";
+            }
 
             Menu {
                 id: dynamoAutoMenu
@@ -325,7 +261,7 @@ ChartView{
                     id: autoMenuItem
                     text: "Enable autoscale"
                     onTriggered: {
-                       dynamoMouse.dynamoGlobalAutoScale();
+                        dynamoMouse.dynamoGlobalAutoScale();
                     }
                 }
 
@@ -339,7 +275,7 @@ ChartView{
                         id: autoXMenuItem
                         text: "Enable all X"
                         onTriggered: {
-                           dynamoMouse.dynamoGlobalAutoScale();
+                            dynamoMouse.dynamoGlobalAutoScale();
                         }
                     }
 
@@ -617,7 +553,7 @@ ChartView{
                 text: "Set as default zoom"
 
                 onTriggered: {
-                    manager.fixAxis();
+                    manager.fixAllAxes();
                 }
             }
         }

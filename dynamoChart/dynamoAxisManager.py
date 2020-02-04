@@ -28,6 +28,8 @@ class DynamoAxisManager(QObject):
         self._innerAxis = inneraxis
         self._firstRound = True
         self._autoScaling = False
+        self._zoomable = True
+        self._pannable = True
         self._registeredSeries = {}  # A dictionary with the following structure:
         #                               - key = registered series name (string)
         #                               - value = series object (QAbstractSeries) + does the series use the axis as an X axis (boolean)? It's a list
@@ -405,7 +407,53 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.autoscaling called at\t{0}'.format(datetime.now(), type(self).__name__))
 
+        if value:
+            self._pannable = False
+            self._zoomable = False
+
         self._autoScaling = value
+
+
+    ## Returns whether or not the manager allows zooming
+    @property
+    def zoomAllowed(self):
+
+        if self._execLog:
+            print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._zoomable
+
+
+    ## Sets the zoom allowed property
+    # @param value Boolen: The value to set
+    @zoomAllowed.setter
+    def zoomAllowed(self, value):
+
+        if self._execLog:
+            print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        self._zoomable = value
+
+
+    ## Returns whether or not the manager allows pan
+    @property
+    def panAllowed(self):
+
+        if self._execLog:
+            print('{1}.panAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        return self._pannable
+
+
+    ## Sets the pan allowed property
+    # @param value Boolen: The value to set
+    @panAllowed.setter
+    def panAllowed(self, value):
+
+        if self._execLog:
+            print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        self._zoomable = value
 
     # ------------------------------------------------------------------------------- #
 

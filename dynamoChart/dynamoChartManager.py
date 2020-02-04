@@ -208,13 +208,12 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.fixAxes called at\t{0}'.format(datetime.now(), type(self).__name__))
         axesSet = qAxesSet.toVariant()
-
-        for k in axesSet.keys():
-            if axesSet[k] == "x":
-                self._assignedX[k].fixAxis()
-            else:
-                self._assignedY[k].fixAxis()
-
+                                                                                                                                                                                                                                                                                                                                        
+        for a in axesSet["x"]:
+            self._assignedX[a].fixAxis()
+        for a in axesSet["y"]:
+            self._assignedY[a].fixAxis()
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 
     ## Uses current axes limits as default zoom level
     @Slot()
@@ -292,6 +291,12 @@ class DynamoChartManager(QObject):
             print('{1}.zoom called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         zoomDict = qZoomDict.toVariant()
+        for k in self._assignedX.keys():
+            if self._assignedX[k].zoomAllowed:
+                self._assignedX[k].zoom(zoomDict["verse"])
+        for k in self._assignedY.keys():
+            if self._assignedY[k].zoomAllowed:
+                self._assignedY[k].zoom(zoomDict["verse"])
 
 
     ## Performs a pan on the x direction
@@ -302,6 +307,9 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.panX called at\t{0}'.format(datetime.now(), type(self).__name__))
         panXDict = qPanXDict.toVariant()
+        for k in self._assignedX.keys():
+            if self._assignedX[k].panAllowed:
+                self._assignedX[k].pan(panXDict["normDelta"])
 
 
     ## Performs a pan on the y direction
@@ -312,6 +320,9 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.panY called at\t{0}'.format(datetime.now(), type(self).__name__))
         panYDict = qPanYDict.toVariant()
+        for k in self._assignedY.keys():
+            if self._assignedY[k].panAllowed:
+                self._assignedY[k].pan(panYDict["normDelta"])
 
 
     ## Replaces all series points with new ones
@@ -352,6 +363,34 @@ class DynamoChartManager(QObject):
     def setAutoScale(self,qAutoscaleValDict):
 
         autoScaleValDict = qAutoscaleValDict.toVariant()
+        for k in autoScaleValDict["x"].keys():
+            self._assignedX[k].autoscaling = autoScaleValDict["x"][k]
+        for k in autoScaleValDict["y"].keys():
+            self._assignedY[k].autoscaling = autoScaleValDict["y"][k]
+
+
+    ## Sets the zoom values
+    # @param qZoomValDict QJSValue: Contains two booleans for x and y axis
+    @Slot('QVariant')
+    def setZoomAllowed(self, qZoomValDict):
+
+        zoomValDict = qZoomValDict.toVariant()
+        for k in zoomValDict["x"].keys():
+            self._assignedX[k].zoomAllowed = zoomValDict["x"][k]
+        for k in zoomValDict["y"].keys():
+            self._assignedY[k].zoomAllowed = zoomValDict["y"][k]
+
+
+    ## Sets the pan values
+    # @param qPanValDict QJSValue: Contains two booleans for x and y axis
+    @Slot('QVariant')
+    def setPanAllowed(self, qPanValDict):
+
+        panValDict = qPanValDict.toVariant()
+        for k in panValDict["x"].keys():
+            self._assignedX[k].panAllowed = panValDict["x"][k]
+        for k in panValDict["y"].keys():
+            self._assignedY[k].panAllowed = panValDict["y"][k]
 
 
     ## Sets whether or not the chart has to behave as a strip chart and the number of points for the chart
@@ -362,7 +401,6 @@ class DynamoChartManager(QObject):
         stripSet = qStripSet.toVariant()
         self._stripChart = stripSet["doStrip"]
         self._stripPoints = stripSet["points"]
-
 
     # ------------------------------------------------------------------------------- #
 
