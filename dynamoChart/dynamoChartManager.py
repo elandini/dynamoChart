@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 
 from dynamoChart.dynamoAxisManager import DynamoAxisManager
+from .definitions import *
 
 STRIP = True
 #STRIP = False
@@ -17,6 +18,7 @@ class DynamoChartManager(QObject):
     axisChanged = Signal()
     interactionEnableChanged = Signal()
     addingSeries = Signal('QVariant')
+    errorSignal = Signal(str)
 
     # ------------------------------------------------------------------------------- #
 
@@ -248,6 +250,10 @@ class DynamoChartManager(QObject):
 
         if self._execLog:
             print('{1}.addSeries called at\t{0}'.format(datetime.now(), type(self).__name__))
+        if seriesFeatures["type"] not in ALLOWED.keys():
+            self.errorSignal.emit("Wrong series type")
+            return
+        seriesFeatures["type"] = ALLOWED[seriesFeatures["type"]]
         self.addingSeries.emit(seriesFeatures)
 
 
@@ -308,6 +314,8 @@ class DynamoChartManager(QObject):
             print('{1}.panX called at\t{0}'.format(datetime.now(), type(self).__name__))
         panXDict = qPanXDict.toVariant()
         for k in self._assignedX.keys():
+            if self._verbose:
+                print("Is it allowed on {0}? {1}".format(k,self._assignedX[k].panAllowed))
             if self._assignedX[k].panAllowed:
                 self._assignedX[k].pan(panXDict["normDelta"])
 
@@ -339,8 +347,8 @@ class DynamoChartManager(QObject):
         for i in range(len(newX)):
             point = QPointF(newX[i], newY[i])
             points.append(point)
-        self._seriesDict[inputDict["index"]].replace(points)
-        self.seriesWiseAutoscale(inputDict["index"])
+        self._seriesDict[inputDict["name"]].replace(points)
+        self.seriesWiseAutoscale(inputDict["name"])
         self._stillDrawing = False
 
 
@@ -387,10 +395,20 @@ class DynamoChartManager(QObject):
     def setPanAllowed(self, qPanValDict):
 
         panValDict = qPanValDict.toVariant()
+        if self._verbose:
+            print("Got: {0}".format(panValDict))
         for k in panValDict["x"].keys():
+            if self._verbose:
+                print("x setting {0} on {1} axis".format(panValDict["x"][k],k))
             self._assignedX[k].panAllowed = panValDict["x"][k]
+            if self._verbose:
+                print("x axis {1} is {0} now".format(self._assignedX[k].panAllowed,k))
         for k in panValDict["y"].keys():
+            if self._verbose:
+                print("y setting {0} on {1} axis".format(panValDict["y"][k],k))
             self._assignedY[k].panAllowed = panValDict["y"][k]
+            if self._verbose:
+                print("y axis {1} is {0} now".format(self._assignedY[k].panAllowed,k))
 
 
     ## Sets whether or not the chart has to behave as a strip chart and the number of points for the chart

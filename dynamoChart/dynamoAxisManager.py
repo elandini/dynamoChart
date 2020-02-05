@@ -135,6 +135,8 @@ class DynamoAxisManager(QObject):
             raise ValueError("verse parameter must be either 1 or -1")
         if self._innerAxis is None or not self.used():
             return
+        if self.autoscaling:
+            return
 
         theFactor = self._scaleFactor**verse
 
@@ -152,6 +154,8 @@ class DynamoAxisManager(QObject):
             print('{1}.pan called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         if self._innerAxis is None or not self.used():
+            return
+        if self.autoscaling:
             return
 
         limits = self.getRange()
@@ -181,6 +185,9 @@ class DynamoAxisManager(QObject):
 
         self._innerAxis.setMax(self._defMax)
         self._innerAxis.setMin(self._defMin)
+        self._zoomable = True
+        self._pannable = True
+        self._autoScaling = False
 
 
     ## Tells whether or not the series list is empty
@@ -453,7 +460,7 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        self._zoomable = value
+        self._pannable = value
 
     # ------------------------------------------------------------------------------- #
 

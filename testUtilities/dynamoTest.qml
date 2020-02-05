@@ -5,7 +5,8 @@ import QtQuick.Window 2.12
 import QtQuick.Controls.Material 2.3
 import QtQuick.Layouts 1.12
 import QtQuick.Dialogs 1.2
-import "dynamoChart"
+import QtCharts 2.3
+import "../dynamoChart"
 
 ApplicationWindow {
 
@@ -27,6 +28,9 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
                 manager: ChartMng
+                Component.onCompleted: function(){
+                    dynamoTest.managerAssociation();
+                }
             }
 
             ColumnLayout{
@@ -69,9 +73,10 @@ ApplicationWindow {
                     Layout.maximumHeight: width
                     text: "S"
                     onClicked: function(){
-                        var x = [1,2,3,4];
-                        ChartMng.prova(x);
-                        console.log(JSON.stringify(x));
+                        console.log(ChartView.SeriesTypeLine);
+                        console.log(ChartView.SeriesTypeScatter);
+                        Tester.sendIt(0);
+                        dynamoTest.setState("filled");
                     }
                 }
 
