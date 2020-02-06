@@ -5,6 +5,14 @@ import QtCharts 2.3
 
 ChartView{
     focus: true
+    property string xBName: "bottom"
+    property string xTName: "top"
+    property string logXBName: "logBottom"
+    property string logXTName: "logTop"
+    property string yLName: "left"
+    property string yRName: "right"
+    property string logYLName: "logLeft"
+    property string logYRName: "logRight"
     property var manager
     property var currentSeries: {[]}
     // codes are numbers going from 0 to 1111. They are formed this way:
@@ -252,7 +260,7 @@ ChartView{
         }
         onMouseXChanged: {
             if(cursorShape === Qt.ClosedHandCursor){
-                var normDelta = (mouseX-oldX)/(parent.plotArea["width"]);
+                var normDelta = (oldX-mouseX)/(parent.plotArea["width"]);
                 oldX = mouseX;
                 manager.panX({"normDelta":normDelta});
             }
@@ -296,8 +304,12 @@ ChartView{
             property bool singleAutoTrigger: true
             property bool singlePanTrigger: true
             property bool singleZoomTrigger: true
+            property bool autoDerived: false
+            property bool zoomDerived: false
+            property bool panDerived: false
 
             function allAutoTriggers(value){
+                console.log(value);
                 singleAutoTrigger = false;
                 autoMenuItem.text = value ? "Disable autoscale" : "Enable autoscale";
                 autoXMenuItem.text = value ? "Disable all X" : "Enable all X";
@@ -312,6 +324,14 @@ ChartView{
                 autoYRMenuItem.checked = value;
 
                 sendAutoTriggers();
+
+                zoomMenuItem.text = !value ? "Disable zoom" : "Enable zoom";
+                zoomXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+                zoomYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
+                panMenuItem.text = !value ? "Disable pan" : "Enable pan";
+                panXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+                panYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
+
                 singleAutoTrigger = true;
             }
             function allXAutoTriggers(value){
@@ -323,6 +343,10 @@ ChartView{
                 autoXTMenuItem.checked = value;
 
                 sendAutoTriggers();
+
+                zoomXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+                panXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+
                 singleAutoTrigger = true;
             }
             function allYAutoTriggers(value){
@@ -334,7 +358,24 @@ ChartView{
                 autoYRMenuItem.checked = value;
 
                 sendAutoTriggers();
+                zoomYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
+                panYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleAutoTrigger = true;
+            }
+            function checkAutoEnabled(){
+                var xOk = true;
+                var yOk = true;
+
+                xOk = autoXBMenuItem.enabled ? xOk && autoXBMenuItem.checked : xOk;
+                xOk = autoXTMenuItem.enabled ? xOk && autoXTMenuItem.checked : xOk;
+                xOk = autoLogXBMenuItem.enabled ? xOk && autoLogXBMenuItem.checked : xOk;
+                xOk = autoLogXTMenuItem.enabled ? xOk && autoLogXTMenuItem.checked : xOk;
+                yOk = autoYLMenuItem.enabled ? yOk && autoYLMenuItem.checked : yOk;
+                yOk = autoYRMenuItem.enabled ? yOk && autoYRMenuItem.checked : yOk;
+                yOk = autoLogYLMenuItem.enabled ? yOk && autoLogYLMenuItem.checked : yOk;
+                yOk = autoLogYRMenuItem.enabled ? yOk && autoLogYRMenuItem.checked : yOk;
+
+                return [xOk,yOk];
             }
             function sendAutoTriggers(){
                 var toSend = {"x":{},"y":{}};
@@ -347,7 +388,40 @@ ChartView{
                 toSend["y"][yLogAxisL.objectName] = autoLogYLMenuItem.checked;
                 toSend["y"][yLogAxisR.objectName] = autoLogYRMenuItem.checked;
 
+                var checks = checkAutoEnabled();
+
+                autoMenuItem.text = checks[0]&&checks[1] ? "Disable autoscale" : "Enable autoscale";
+                autoXMenuItem.text = checks[0] ? "Disable all X" : "Enable all X";
+                autoYMenuItem.text = checks[1] ? "Disable all Y" : "Enable all Y";
+
                 manager.setAutoScale(toSend);
+                if(!panDerived && !zoomDerived) autoTriggerToOther();
+            }
+            function autoTriggerToOther(){
+                autoDerived = true;
+                singlePanTrigger = false;
+                singleZoomTrigger = false;
+                panXBMenuItem.checked = !autoXBMenuItem.checked;
+                panXTMenuItem.checked = !autoXTMenuItem.checked;
+                panLogXBMenuItem.checked = !autoLogXBMenuItem.checked;
+                panLogXTMenuItem.checked = !autoLogXTMenuItem.checked;
+                panYLMenuItem.checked = !autoYLMenuItem.checked;
+                panYRMenuItem.checked = !autoYRMenuItem.checked;
+                panLogYLMenuItem.checked = !autoLogYLMenuItem.checked;
+                panLogYRMenuItem.checked = !autoLogYRMenuItem.checked;
+                zoomXBMenuItem.checked = !autoXBMenuItem.checked;
+                zoomXTMenuItem.checked = !autoXTMenuItem.checked;
+                zoomLogXBMenuItem.checked = !autoLogXBMenuItem.checked;
+                zoomLogXTMenuItem.checked = !autoLogXTMenuItem.checked;
+                zoomYLMenuItem.checked = !autoYLMenuItem.checked;
+                zoomYRMenuItem.checked = !autoYRMenuItem.checked;
+                zoomLogYLMenuItem.checked = !autoLogYLMenuItem.checked;
+                zoomLogYRMenuItem.checked = !autoLogYRMenuItem.checked;
+                sendZoomTriggers();
+                sendPanTriggers();
+                singlePanTrigger = true;
+                singleZoomTrigger = true;
+                autoDerived = false;
             }
             function allZoomTriggers(value){
                 singleZoomTrigger = false;
@@ -364,6 +438,9 @@ ChartView{
                 zoomYRMenuItem.checked = value;
 
                 sendZoomTriggers();
+                autoMenuItem.text = !value ? "Disable autoscale" : "Enable autoscale";
+                autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+                autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleZoomTrigger = true;
             }
             function allXZoomTriggers(value){
@@ -375,6 +452,7 @@ ChartView{
                 zoomXTMenuItem.checked = value;
 
                 sendZoomTriggers();
+                autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
                 singleZoomTrigger = true;
             }
             function allYZoomTriggers(value){
@@ -386,7 +464,23 @@ ChartView{
                 zoomYRMenuItem.checked = value;
 
                 sendZoomTriggers();
+                autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleZoomTrigger = true;
+            }
+            function checkZoomEnabled(){
+                var xOk = true;
+                var yOk = true;
+
+                xOk = zoomXBMenuItem.enabled ? xOk && zoomXBMenuItem.checked : xOk;
+                xOk = zoomXTMenuItem.enabled ? xOk && zoomXTMenuItem.checked : xOk;
+                xOk = zoomLogXBMenuItem.enabled ? xOk && zoomLogXBMenuItem.checked : xOk;
+                xOk = zoomLogXTMenuItem.enabled ? xOk && zoomLogXTMenuItem.checked : xOk;
+                yOk = zoomYLMenuItem.enabled ? yOk && zoomYLMenuItem.checked : yOk;
+                yOk = zoomYRMenuItem.enabled ? yOk && zoomYRMenuItem.checked : yOk;
+                yOk = zoomLogYLMenuItem.enabled ? yOk && zoomLogYLMenuItem.checked : yOk;
+                yOk = zoomLogYRMenuItem.enabled ? yOk && zoomLogYRMenuItem.checked : yOk;
+
+                return [xOk,yOk];
             }
             function sendZoomTriggers(){
                 var toSend = {"x":{},"y":{}};
@@ -399,7 +493,45 @@ ChartView{
                 toSend["y"][yLogAxisL.objectName] = zoomLogYLMenuItem.checked;
                 toSend["y"][yLogAxisR.objectName] = zoomLogYRMenuItem.checked;
 
+                var checks = checkZoomEnabled();
+
+                zoomMenuItem.text = checks[0]&&checks[1] ? "Disable zoom" : "Enable zoom";
+                zoomXMenuItem.text = checks[0] ? "Disable all X" : "Enable all X";
+                zoomYMenuItem.text = checks[1] ? "Disable all Y" : "Enable all Y";
+
                 manager.setZoomAllowed(toSend);
+                if (!autoDerived) zoomToAuto();
+            }
+            function zoomToAuto(){
+                zoomDerived = true;
+                singleAutoTrigger = false;
+                if(zoomXBMenuItem.checked){
+                    autoXBMenuItem.checked = false;
+                }
+                if(zoomXTMenuItem.checked){
+                    autoXTMenuItem.checked = false;
+                }
+                if(zoomLogXBMenuItem.checked){
+                    autoLogXBMenuItem.checked = false;
+                }
+                if(zoomLogXTMenuItem.checked){
+                    autoLogXTMenuItem.checked = false;
+                }
+                if(zoomYLMenuItem.checked){
+                    autoYLMenuItem.checked = false;
+                }
+                if(zoomYRMenuItem.checked){
+                    autoYRMenuItem.checked = false;
+                }
+                if(zoomLogYLMenuItem.checked){
+                    autoLogYLMenuItem.checked = false;
+                }
+                if(zoomLogYRMenuItem.checked){
+                    autoLogYRMenuItem.checked = false;
+                }
+                singleAutoTrigger = false;
+                sendAutoTriggers();
+                zoomDerived = false;
             }
             function allPanTriggers(value){
                 singlePanTrigger = false;
@@ -416,6 +548,9 @@ ChartView{
                 panYRMenuItem.checked = value;
 
                 sendPanTriggers();
+                autoMenuItem.text = !value ? "Disable autoscale" : "Enable autoscale";
+                autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
+                autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singlePanTrigger = true;
             }
             function allXPanTriggers(value){
@@ -427,6 +562,7 @@ ChartView{
                 panXTMenuItem.checked = value;
 
                 sendPanTriggers();
+                autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
                 singlePanTrigger = true;
             }
             function allYPanTriggers(value){
@@ -438,7 +574,23 @@ ChartView{
                 panYRMenuItem.checked = value;
 
                 sendPanTriggers();
+                autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singlePanTrigger = true;
+            }
+            function checkPanEnabled(){
+                var xOk = true;
+                var yOk = true;
+
+                xOk = panXBMenuItem.enabled ? xOk && panXBMenuItem.checked : xOk;
+                xOk = panXTMenuItem.enabled ? xOk && panXTMenuItem.checked : xOk;
+                xOk = panLogXBMenuItem.enabled ? xOk && panLogXBMenuItem.checked : xOk;
+                xOk = panLogXTMenuItem.enabled ? xOk && panLogXTMenuItem.checked : xOk;
+                yOk = panYLMenuItem.enabled ? yOk && panYLMenuItem.checked : yOk;
+                yOk = panYRMenuItem.enabled ? yOk && panYRMenuItem.checked : yOk;
+                yOk = panLogYLMenuItem.enabled ? yOk && panLogYLMenuItem.checked : yOk;
+                yOk = panLogYRMenuItem.enabled ? yOk && panLogYRMenuItem.checked : yOk;
+
+                return [xOk,yOk];
             }
             function sendPanTriggers(){
                 var toSend = {"x":{},"y":{}};
@@ -451,7 +603,45 @@ ChartView{
                 toSend["y"][yLogAxisL.objectName] = panLogYLMenuItem.checked;
                 toSend["y"][yLogAxisR.objectName] = panLogYRMenuItem.checked;
 
+                var checks = checkPanEnabled();
+
+                panMenuItem.text = checks[0]&&checks[1] ? "Disable pan" : "Enable pan";
+                panXMenuItem.text = checks[0] ? "Disable all X" : "Enable all X";
+                panYMenuItem.text = checks[1] ? "Disable all Y" : "Enable all Y";
+
                 manager.setPanAllowed(toSend);
+                if (!autoDerived) panToAuto();
+            }
+            function panToAuto(){
+                panDerived = true;
+                singleAutoTrigger = false;
+                if(panXBMenuItem.checked){
+                    autoXBMenuItem.checked = false;
+                }
+                if(panXTMenuItem.checked){
+                    autoXTMenuItem.checked = false;
+                }
+                if(panLogXBMenuItem.checked){
+                    autoLogXBMenuItem.checked = false;
+                }
+                if(panLogXTMenuItem.checked){
+                    autoLogXTMenuItem.checked = false;
+                }
+                if(panYLMenuItem.checked){
+                    autoYLMenuItem.checked = false;
+                }
+                if(panYRMenuItem.checked){
+                    autoYRMenuItem.checked = false;
+                }
+                if(panLogYLMenuItem.checked){
+                    autoLogYLMenuItem.checked = false;
+                }
+                if(panLogYRMenuItem.checked){
+                    autoLogYRMenuItem.checked = false;
+                }
+                singleAutoTrigger = false;
+                sendAutoTriggers();
+                panDerived = false;
             }
 
             Menu {

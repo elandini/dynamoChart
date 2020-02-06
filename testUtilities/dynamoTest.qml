@@ -54,7 +54,17 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     Layout.fillWidth: true
                     Layout.maximumHeight: width
+                    property bool start: true
                     text: "P"
+                    onClicked: function(){
+                        if(start){
+                            TTimer.startTimer();
+                        }
+                        else{
+                            TTimer.stopTimer();
+                        }
+                        start = !start;
+                    }
                 }
 
                 Item {

@@ -55,6 +55,7 @@ class DynamoChartManager(QObject):
         self._assignedY = {}
         self._axisAssigned = False
         self._stripChart = False
+        self._stillDrawing = False
         self._interactionEnabled = True
         self._stripPoints = 0
         self._verbose = verbose
@@ -335,7 +336,7 @@ class DynamoChartManager(QObject):
 
     ## Replaces all series points with new ones
     # @param inputDict Dictionary: A dictionary containing the series index, an x value list and an y values one
-    @Slot('QVariant')
+    @Slot(dict)
     def replaceSeries(self,inputDict):
 
         if self._stillDrawing:
@@ -371,6 +372,8 @@ class DynamoChartManager(QObject):
     def setAutoScale(self,qAutoscaleValDict):
 
         autoScaleValDict = qAutoscaleValDict.toVariant()
+        if self._verbose:
+            print("Got: {0}".format(autoScaleValDict))
         for k in autoScaleValDict["x"].keys():
             self._assignedX[k].autoscaling = autoScaleValDict["x"][k]
         for k in autoScaleValDict["y"].keys():

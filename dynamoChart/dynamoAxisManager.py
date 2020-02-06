@@ -414,9 +414,11 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.autoscaling called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        if value:
-            self._pannable = False
-            self._zoomable = False
+        self._pannable = not value
+        self._zoomable = not value
+
+        if value and not self._autoScaling:
+            self._firstRound = True
 
         self._autoScaling = value
 
@@ -440,6 +442,8 @@ class DynamoAxisManager(QObject):
             print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         self._zoomable = value
+        if self._autoScaling and value:
+            self._autoScaling = False
 
 
     ## Returns whether or not the manager allows pan
@@ -461,6 +465,8 @@ class DynamoAxisManager(QObject):
             print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
 
         self._pannable = value
+        if self._autoScaling and value:
+            self._autoScaling = False
 
     # ------------------------------------------------------------------------------- #
 
