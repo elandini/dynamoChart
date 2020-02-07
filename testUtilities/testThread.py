@@ -55,3 +55,49 @@ class TestThread(QObject):
             while self.internalTimer.isActive():
                 sleep(0.05)
             self.internalTimer = None
+
+
+
+class TestScatter(QObject):
+
+    data = Signal(dict)
+
+    def __init__(self,timer,name,xInc,parent=None):
+
+        QObject.__init__(self,parent)
+
+        self.xInc = xInc
+
+        self.currX = 0
+        self.name = name
+        self.timer = timer
+        self.internalTimer = None
+
+
+    @Slot()
+    def startTimer(self):
+
+        self.internalTimer = QTimer(self)
+        self.internalTimer.timeout.connect(self.calcData)
+        self.internalTimer.setSingleShot(False)
+        self.internalTimer.start(self.timer)
+
+
+    def calcData(self):
+
+        dataX = self.currX
+        dataY = np.sin(dataX)
+        self.currX+=self.xInc
+        toSend = {self.name:[dataX,dataY]}
+
+        self.data.emit(toSend)
+
+
+    @Slot()
+    def stopTimer(self):
+
+        if self.internalTimer is not None:
+            self.internalTimer.stop()
+            while self.internalTimer.isActive():
+                sleep(0.05)
+            self.internalTimer = None

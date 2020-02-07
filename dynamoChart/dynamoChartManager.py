@@ -19,6 +19,7 @@ class DynamoChartManager(QObject):
     interactionEnableChanged = Signal()
     addingSeries = Signal('QVariant')
     errorSignal = Signal(str)
+    cleared = Signal()
 
     # ------------------------------------------------------------------------------- #
 
@@ -125,12 +126,13 @@ class DynamoChartManager(QObject):
 
     ## Performs an autoscale operation on a particular axis when a new point is added or removed
     # @param manager DynamoAxisManager: The axis to manage
-    def singleAxisPointScale(self,manager):
+    # @param seriesName String: The series the point has been added to
+    def singleAxisPointScale(self,manager,seriesName):
 
         if self._execLog:
             print('{1}.singleAxisPointScale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        manager.autoScalePoint()
+        manager.autoScalePoint(seriesName)
 
 
     ## Checks whether or not a point added changes the x and y axis scale when on autoscale
@@ -142,11 +144,11 @@ class DynamoChartManager(QObject):
 
         for kx in self._assignedX.keys():
             if self._assignedX[kx].autoscaling:
-                self.singleAxisPointScale(self._assignedX[kx])
+                self.singleAxisPointScale(self._assignedX[kx],seriesName)
                 self._assignedX[kx].fixAxis()
         for ky in self._assignedY.keys():
             if self._assignedY[ky].autoscaling:
-                self.singleAxisPointScale(self._assignedY[ky])
+                self.singleAxisPointScale(self._assignedY[ky],seriesName)
                 self._assignedY[ky].fixAxis()
 
 
@@ -201,6 +203,7 @@ class DynamoChartManager(QObject):
         for k in self._assignedY.keys():
             self._assignedY[k].clearAxis()
         self._seriesDict = {}
+        self.cleared.emit()
 
 
     ## It fixes a set of selected axes
@@ -373,7 +376,7 @@ class DynamoChartManager(QObject):
 
         autoScaleValDict = qAutoscaleValDict.toVariant()
         if self._verbose:
-            print("Got: {0}".format(autoScaleValDict))
+            print("Auto Got: {0}".format(autoScaleValDict))
         for k in autoScaleValDict["x"].keys():
             self._assignedX[k].autoscaling = autoScaleValDict["x"][k]
         for k in autoScaleValDict["y"].keys():
@@ -399,7 +402,7 @@ class DynamoChartManager(QObject):
 
         panValDict = qPanValDict.toVariant()
         if self._verbose:
-            print("Got: {0}".format(panValDict))
+            print("Pan Got: {0}".format(panValDict))
         for k in panValDict["x"].keys():
             if self._verbose:
                 print("x setting {0} on {1} axis".format(panValDict["x"][k],k))

@@ -71,6 +71,7 @@ ChartView{
         newSeries = createSeries(params.type,params.name,theX,theY);
         newSeries.pointsVisible = params.points;
         newSeries.color = params.color;
+        newSeries.markerSize = params.markerSize;
         var toSend = params;
         params.series = newSeries;
         manager.registerSeries(params);
@@ -114,9 +115,9 @@ ChartView{
 
         manager.axisAssigned = true;
         manager.addingSeries.connect(addNewSeries);
+        manager.cleared.connect(smartClear);
     }
     function smartClear(){
-        manager.clear();
         for (var s in currentSeries){
             var toRemove = series(currentSeries[s]);
             removeSeries(toRemove);

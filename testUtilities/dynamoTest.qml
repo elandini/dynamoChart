@@ -39,6 +39,25 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.maximumWidth: 70
 
+                RoundButton{
+                    id: scatterBtn
+                    Material.background: Material.Blue
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    Layout.maximumHeight: width
+                    property bool start: true
+                    text: "S"
+                    onClicked: function(){
+                        if(start){
+                            STimer.startTimer();
+                        }
+                        else{
+                            STimer.stopTimer();
+                        }
+                        start = !start;
+                    }
+                }
+
                 Item {
                     // spacer item
                     id: button1Spacer
@@ -49,13 +68,13 @@ ApplicationWindow {
 
 
                 RoundButton{
-                    id: playBtn
+                    id: replaceBtn
                     Material.background: Material.Lime
                     Layout.fillHeight: true
                     Layout.fillWidth: true
                     Layout.maximumHeight: width
                     property bool start: true
-                    text: "P"
+                    text: "R"
                     onClicked: function(){
                         if(start){
                             TTimer.startTimer();
@@ -76,15 +95,13 @@ ApplicationWindow {
                 }
 
                 RoundButton{
-                    id: stopBtn
+                    id: addBtn
                     Material.background: Material.Red
                     Layout.fillHeight: true
                     Layout.fillWidth: true
                     Layout.maximumHeight: width
-                    text: "S"
+                    text: "AL"
                     onClicked: function(){
-                        console.log(ChartView.SeriesTypeLine);
-                        console.log(ChartView.SeriesTypeScatter);
                         Tester.sendIt(0);
                         dynamoTest.setState("filled");
                     }
@@ -98,6 +115,38 @@ ApplicationWindow {
                     Pane { anchors.fill: parent; Material.background: "transparent" }
                 }
 
+                RoundButton{
+                    id: addScatterBtn
+                    Material.background: Material.DeepOrange
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    Layout.maximumHeight: width
+                    text: "AS"
+                    onClicked: function(){
+                        STester.sendIt(0);
+                        ChartMng.setStripChart({"doStrip":true,"points":100})
+                        dynamoTest.setState("filled");
+                    }
+                }
+                Item {
+                    // spacer item
+                    id: button4Spacer
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Pane { anchors.fill: parent; Material.background: "transparent" }
+                }
+
+                RoundButton{
+                    id: clearBtn
+                    Material.background: Material.DeepOrange
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+                    Layout.maximumHeight: width
+                    text: "C"
+                    onClicked: function(){
+                        ChartMng.clear();
+                    }
+                }
             }
         }
     }

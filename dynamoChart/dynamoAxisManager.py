@@ -185,9 +185,9 @@ class DynamoAxisManager(QObject):
 
         self._innerAxis.setMax(self._defMax)
         self._innerAxis.setMin(self._defMin)
-        self._zoomable = True
-        self._pannable = True
-        self._autoScaling = False
+        #self._zoomable = True
+        #self._pannable = True
+        #self._autoScaling = False
 
 
     ## Tells whether or not the series list is empty
@@ -336,12 +336,13 @@ class DynamoAxisManager(QObject):
 
 
     ## Performs an autoscale with respect to a point
-    def autoScalePoint(self):
+    # @param seriesName String: The name of the series to compare
+    def autoScalePoint(self,seriesName):
 
         if self._execLog:
             print('{1}.autoScalePoint called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        if self._innerAxis is None or not self.used():
+        if self._innerAxis is None or not self.used() or not self.registered(seriesName):
             return None
 
         self.setRange([self.getLowestValue(),self.getHighestValue()])
@@ -414,6 +415,8 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.autoscaling called at\t{0}'.format(datetime.now(), type(self).__name__))
 
+        if self._autoScaling == value:
+            return
         self._pannable = not value
         self._zoomable = not value
 
@@ -441,6 +444,8 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
 
+        if self._zoomable == value:
+            return
         self._zoomable = value
         if self._autoScaling and value:
             self._autoScaling = False
@@ -464,6 +469,8 @@ class DynamoAxisManager(QObject):
         if self._execLog:
             print('{1}.zoomAllowed called at\t{0}'.format(datetime.now(), type(self).__name__))
 
+        if self._pannable == value:
+            return
         self._pannable = value
         if self._autoScaling and value:
             self._autoScaling = False
