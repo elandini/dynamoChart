@@ -388,6 +388,18 @@ class DynamoAxisManager(QObject):
         return toReturn
 
 
+    ## Sets the managed axis title
+    # @param title String: The title to set
+    def setAxisTitle(self,text):
+
+        if self._execLog:
+            print('{1}.setAxisTitle called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        if self._innerAxis is None:
+            return
+        self._innerAxis.setTitleText(text)
+
+
     ## Resets the firstRound value to True
     def prepareForAutoscale(self):
 
