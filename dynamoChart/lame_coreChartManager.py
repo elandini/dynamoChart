@@ -136,13 +136,14 @@ class LaMe_CoreChartManager(DynamoChartManager):
 
 
     ## Receives data from the core and translates them for the father class methods
-    # @param dataList List: The data from the LaMe_Core core
-    @Slot(list)
-    def getCoreData(self,dataList):
+    # @param dataDict Dict: The data from the LaMe_Core core
+    @Slot(dict)
+    def getCoreData(self,dataDict):
 
         if self._execLog:
             print('{1}.getCoreData called at\t{0}'.format(datetime.now(), type(self).__name__))
 
+        dataList = dataDict["data"]
         if type(dataList[0]) == list:
             xList = dataList[self._currentXIndex]
             for y in self._currentYIndexes:

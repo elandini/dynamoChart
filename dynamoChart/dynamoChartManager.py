@@ -338,21 +338,22 @@ class DynamoChartManager(QObject):
 
 
     ## Replaces all series points with new ones
-    # @param inputDict Dictionary: A dictionary containing the series index, an x value list and an y values one
+    # @param inputDict Dictionary: A dictionary containing the series names as keys and a list with x values list and an y values one
     @Slot(dict)
     def replaceSeries(self,inputDict):
 
         if self._stillDrawing:
             return
         self._stillDrawing = True
-        points = []
-        newX = inputDict["x"]
-        newY = inputDict["y"]
-        for i in range(len(newX)):
-            point = QPointF(newX[i], newY[i])
-            points.append(point)
-        self._seriesDict[inputDict["name"]].replace(points)
-        self.seriesWiseAutoscale(inputDict["name"])
+        for k in inputDict.keys():
+            points = []
+            newX = inputDict[k][0]
+            newY = inputDict[k][1]
+            for i in range(len(newX)):
+                point = QPointF(newX[i], newY[i])
+                points.append(point)
+            self._seriesDict[k].replace(points)
+            self.seriesWiseAutoscale(k)
         self._stillDrawing = False
 
 
