@@ -61,6 +61,8 @@ class LaMe_CoreChartManager(DynamoChartManager):
 
     ## Obtains and sets the plottype from the core
     # @param plotType Dict: The dictionary containing the plot features
+    #
+    # This slot has to be connected to "sendPlotInfo" signal from a coreQMLDataManager
     @Slot(dict)
     def setPlotType(self,plotType):
 
@@ -136,14 +138,15 @@ class LaMe_CoreChartManager(DynamoChartManager):
 
 
     ## Receives data from the core and translates them for the father class methods
-    # @param dataDict Dict: The data from the LaMe_Core core
-    @Slot(dict)
-    def getCoreData(self,dataDict):
+    # @param dataList List: The data from the LaMe_Core core
+    #
+    # This slot has to be connected with "dataToPlot" signal from a coreQMLDataManager
+    @Slot(list)
+    def getCoreData(self,dataList):
 
         if self._execLog:
             print('{1}.getCoreData called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        dataList = dataDict["data"]
         if type(dataList[0]) == list:
             xList = dataList[self._currentXIndex]
             for y in self._currentYIndexes:
