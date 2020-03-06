@@ -17,7 +17,7 @@ ChartView{
     property var currentSeries: {[]}
     // codes are numbers going from 0 to 1111. They are formed this way:
     //
-    states: [
+    /*states: [
         State {
             name: "empty" //This state is used when the plot is empty. It has no series
             PropertyChanges { target: dynamoMouse; menuEnabled: false }
@@ -34,16 +34,15 @@ ChartView{
             name: "filled" // This state has to be used when the plot has been filled and no other point is going to be added
             PropertyChanges { target: dynamoMouse; menuEnabled: true }
         }
-    ]
+    ]*/
 
     // Sets the chart state
     function setState(newState){
-        state = newState;
+        //state = newState;
     }
     // Adds a series to the chart
     // @param params Dictionary:
     function addNewSeries(params){
-        console.log(JSON.stringify(params));
         var newSeries; // = createSeries(type,name);
         var theX;
         var theY;
@@ -51,8 +50,8 @@ ChartView{
             case "linlin":
                 theX = params.bottom ? xAxisB : xAxisT;
                 theY = params.left ? yAxisL : yAxisR;
-                yAxisL.present = params.left;
-                yAxisR.present = !params.left;
+                //yAxisL.present = params.left;
+                //yAxisR.present = !params.left;
                 break;
             case "loglog":
                 theX = params.bottom ? xLogAxisB : xLogAxisT;
@@ -130,6 +129,7 @@ ChartView{
         yAxisR.present = false;
         yLogAxisL.present = false;
         yLogAxisR.present = false;
+        currentSeries = [];
     }
 
     ValueAxis{
@@ -243,7 +243,7 @@ ChartView{
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        property bool menuEnabled: false
+        property bool menuEnabled: true
         property int oldX: 0
         property int oldY: 0
 
@@ -310,7 +310,6 @@ ChartView{
             property bool panDerived: false
 
             function allAutoTriggers(value){
-                console.log(value);
                 singleAutoTrigger = false;
                 autoMenuItem.text = value ? "Disable autoscale" : "Enable autoscale";
                 autoXMenuItem.text = value ? "Disable all X" : "Enable all X";

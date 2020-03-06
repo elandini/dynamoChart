@@ -433,7 +433,9 @@ class DynamoAxisManager(QObject):
         self._zoomable = not value
 
         if value and not self._autoScaling:
-            self._firstRound = True
+            #self._firstRound = True
+            self.fitSeries()
+            self.fixAxis()
 
         self._autoScaling = value
 

@@ -3,7 +3,7 @@ from PySide2.QtCharts import QtCharts
 import numpy as np
 from datetime import datetime
 
-from dynamoChart.dynamoAxisManager import DynamoAxisManager
+from .dynamoAxisManager import DynamoAxisManager
 from .definitions import *
 
 STRIP = True
@@ -14,7 +14,7 @@ class DynamoChartManager(QObject):
 
     # Signals ----------------------------------------------------------------------- #
 
-    axisDone = Signal()
+    axisAssignedChanged = Signal(bool)
     axisChanged = Signal()
     interactionEnableChanged = Signal()
     addingSeries = Signal('QVariant')
@@ -206,6 +206,16 @@ class DynamoChartManager(QObject):
         self.cleared.emit()
 
 
+    ## Removes all the points from the currently available series
+    @Slot()
+    def emptySeries(self):
+
+        if self._execLog:
+            print('{1}.emptySeries called at\t{0}'.format(datetime.now(), type(self).__name__))
+        for k in self._seriesDict.keys():
+            self._seriesDict[k].removePoints(0,self._seriesDict[k].count())
+
+
     ## It fixes a set of selected axes
     # @param qAxesSet QJSValue: The dictionary containing the axis to fix
     @Slot('QVariant')
@@ -254,6 +264,7 @@ class DynamoChartManager(QObject):
 
         if self._execLog:
             print('{1}.addSeries called at\t{0}'.format(datetime.now(), type(self).__name__))
+
         if seriesFeatures["type"] not in ALLOWED.keys():
             self.errorSignal.emit("Wrong series type")
             return
@@ -342,6 +353,12 @@ class DynamoChartManager(QObject):
     @Slot(dict)
     def replaceSeries(self,inputDict):
 
+        if self._execLog:
+            print('{1}.replaceSeries called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        if self._verbose:
+            print("To replace: {0}".format(inputDict))
+
         if self._stillDrawing:
             return
         self._stillDrawing = True
@@ -362,6 +379,9 @@ class DynamoChartManager(QObject):
     @Slot(dict)
     def addPoint(self,newPointsDict):
 
+        if self._execLog:
+            print('{1}.addPoint called at\t{0}'.format(datetime.now(), type(self).__name__))
+
         for k in newPointsDict.keys():
             self._seriesDict[k].append(*newPointsDict[k])
             if self._stripChart:
@@ -375,6 +395,9 @@ class DynamoChartManager(QObject):
     @Slot('QVariant')
     def setAutoScale(self,qAutoscaleValDict):
 
+        if self._execLog:
+            print('{1}.setAutoScale called at\t{0}'.format(datetime.now(), type(self).__name__))
+
         autoScaleValDict = qAutoscaleValDict.toVariant()
         if self._verbose:
             print("Auto Got: {0}".format(autoScaleValDict))
@@ -382,6 +405,25 @@ class DynamoChartManager(QObject):
             self._assignedX[k].autoscaling = autoScaleValDict["x"][k]
         for k in autoScaleValDict["y"].keys():
             self._assignedY[k].autoscaling = autoScaleValDict["y"][k]
+
+
+    ## Sets the label for a selected set of axis
+    # @param qAxesDict QJSValue: Contains the labels to change and the name of the axes whose label to set
+    @Slot('QVariant')
+    def setAxesLabels(self,qAxesDict):
+
+        if self._execLog:
+            print('{1}.setAxesLabels called at\t{0}'.format(datetime.now(), type(self).__name__))
+
+        axesDict = qAxesDict.toVariant()
+
+        for k in axesDict.keys():
+            if k in self._assignedX.keys():
+                self._assignedX[k].setAxisTitle(axesDict[k])
+            elif k in self._assignedY.keys():
+                self._assignedY[k].setAxisTitle(axesDict[k])
+            else:
+                continue
 
 
     ## Sets the zoom values
@@ -526,9 +568,12 @@ class DynamoChartManager(QObject):
 
         if self._execLog:
             print('{1}.setAxisAssigned called at\t{0}'.format(datetime.now(), type(self).__name__))
+        if self._verbose:
+            print("axisAssigned: {0}; value: {1}".format(self._axisAssigned,value))
         if value == self._axisAssigned:
             return
         self._axisAssigned = value
+        self.axisAssignedChanged.emit(value)
 
 
     ## Sets self._interactionEnabled value
@@ -632,6 +677,6 @@ class DynamoChartManager(QObject):
     yLogLeft = Property(QtCharts.QLogValueAxis, fget=yLogLeft, fset=setYLogLeft, notify=axisChanged)
     xLogTop = Property(QtCharts.QLogValueAxis, fget=xLogTop, fset=setXLogTop, notify=axisChanged)
     yLogRight = Property(QtCharts.QLogValueAxis, fget=yLogRight, fset=setYLogRight, notify=axisChanged)
-    axisAssigned = Property(bool,fget=axisAssigned, fset=setAxisAssigned, notify=axisDone)
+    axisAssigned = Property(bool,fget=axisAssigned, fset=setAxisAssigned, notify=axisAssignedChanged)
     interactionEnabled = Property(bool,fget=interactionEnabled, fset=setInteractionEnabled, notify=interactionEnableChanged)
     # ------------------------------------------------------------------------------- #
