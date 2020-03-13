@@ -72,26 +72,6 @@ class DynamoChartManager(QObject):
 
         return np.min(seriesX),np.max(seriesX)
 
-    ## Returns the y axis limits for a specific series
-    # @param seriesName String: The series to inspect
-    def getYLimits(self,seriesName):
-
-        seriesPoints = self._seriesDict[seriesName].points()
-        seriesY = np.array([p.y() for p in seriesPoints])
-
-        return np.min(seriesY),np.max(seriesY)
-
-
-    ## Searches for the lowest x value among the available series
-    def getLowerXForStrip(self):
-
-        minX = None
-        for k in self._seriesDict.keys():
-            tempLim = self.getXLimits(k)
-            if minX is None or tempLim[0]<minX:
-                minX = tempLim[0]
-        return minX
-
 
     ## Manages the autoscaling of a single axis
     # @param manager DynamoAxisManager: The axis to manage
@@ -101,10 +81,7 @@ class DynamoChartManager(QObject):
         if self._execLog:
             print('{1}.singleAxisAutoscale called at\t{0}'.format(datetime.now(), type(self).__name__))
 
-        if manager.getFirstRound():
-            manager.adaptToSeries(seriesName)
-        else:
-            manager.autoScaleLemma(seriesName)
+        manager.autoScaleLemma(seriesName)
 
 
     ## Performs an autoscaling around a specific series
@@ -268,7 +245,12 @@ class DynamoChartManager(QObject):
         if seriesFeatures["type"] not in ALLOWED.keys():
             self.errorSignal.emit("Wrong series type")
             return
-        seriesFeatures["type"] = ALLOWED[seriesFeatures["type"]]
+        seriesFeatures["type"] = ALLOWED[seriesFeatures["type"]]  # The series type, in qml is a number and, since for
+        #                                                           clarity sake the "type" value in the input
+        #                                                           dictionary is a string that report a human readable
+        #                                                           name for the type, before sending the dictionary to
+        #                                                           the QML object, the "type" value has to be replaced
+        #                                                           with the correspondent number
         self.addingSeries.emit(seriesFeatures)
 
 

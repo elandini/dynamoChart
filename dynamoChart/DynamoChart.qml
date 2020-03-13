@@ -3,7 +3,8 @@ import QtQuick.Controls 2.12
 import QtQuick.Controls.Material 2.3
 import QtCharts 2.3
 
-ChartView{
+ChartView{ // This element is the QML side of the "DynamoChart library".
+           // It has to be used in combination with a DynamoChartManager object (or a derived one) on the python side
     focus: true
     property string xBName: "bottom"
     property string xTName: "top"
@@ -13,35 +14,15 @@ ChartView{
     property string yRName: "right"
     property string logYLName: "logLeft"
     property string logYRName: "logRight"
-    property var manager
+    property var manager  // This is the DynamoChartManager object associated with the QML chart.
+                          // The value of this property has to be assigned before allowing the user
+                          // to interact with the QML chart.
     property var currentSeries: {[]}
-    // codes are numbers going from 0 to 1111. They are formed this way:
-    //
-    /*states: [
-        State {
-            name: "empty" //This state is used when the plot is empty. It has no series
-            PropertyChanges { target: dynamoMouse; menuEnabled: false }
-        },
-        State {
-            name: "initialized" //This state is used when the plot is empty. It has series but they are empty
-            PropertyChanges { target: dynamoMouse; menuEnabled: true }
-        },
-        State {
-            name: "measuring" // This is the state to be used when new points are fed to the plot
-            PropertyChanges { target: dynamoMouse; menuEnabled: false }
-        },
-        State {
-            name: "filled" // This state has to be used when the plot has been filled and no other point is going to be added
-            PropertyChanges { target: dynamoMouse; menuEnabled: true }
-        }
-    ]*/
 
-    // Sets the chart state
-    function setState(newState){
-        //state = newState;
-    }
-    // Adds a series to the chart
-    // @param params Dictionary:
+    /// <summary>
+    /// Adds a series to the chart
+    /// </summary>
+    /// <param name="params">Dictionary: It contains all the information needed to create a new series on the QML side</param>
     function addNewSeries(params){
         var newSeries; // = createSeries(type,name);
         var theX;
@@ -50,8 +31,6 @@ ChartView{
             case "linlin":
                 theX = params.bottom ? xAxisB : xAxisT;
                 theY = params.left ? yAxisL : yAxisR;
-                //yAxisL.present = params.left;
-                //yAxisR.present = !params.left;
                 break;
             case "loglog":
                 theX = params.bottom ? xLogAxisB : xLogAxisT;
@@ -66,41 +45,38 @@ ChartView{
                 theY = params.left ? yAxisL : yAxisR;
                 break;
         }
-        axesPresence(theX,theY);
+        if(!theX.visible){
+            theX.visible = true;
+        }
+        if(!theY.visible){
+            theY.visible = true;
+        }
         newSeries = createSeries(params.type,params.name,theX,theY);
         newSeries.pointsVisible = params.points;
         newSeries.color = params.color;
         newSeries.markerSize = params.markerSize;
-        var toSend = params;
-        params.series = newSeries;
+        params.series = newSeries;  // The actual series object has to be created here and
+                                    // than send to the manager that will manage it because
+                                    // that's the only way I found to get everything to work
+                                    // as expected.
         manager.registerSeries(params);
         currentSeries.push(params.name);
-        if (state === "empty"){
-            setState("initialized");
-        }
 
         return newSeries
     }
-    function axisPresence(toSet,inputAxis){
-        if(!toSet.present){
-            toSet.present = inputAxis === toSet;
-        }
-    }
-    function axesPresence(inputX,inputY){
-        axisPresence(xAxisB,inputX);
-        axisPresence(xAxisT,inputX);
-        axisPresence(xLogAxisB,inputX);
-        axisPresence(xLogAxisT,inputX);
-        axisPresence(yAxisL,inputY);
-        axisPresence(yAxisR,inputY);
-        axisPresence(yLogAxisL,inputY);
-        axisPresence(yLogAxisR,inputY);
-    }
+    /// <summary>
+    /// It can be used to add multiple series to theChartView
+    /// </summary>
+    /// <param name="seriesContainer">Dictionary: It contains a dictionary for each new series to add</param>
     function addMultipleSeries(seriesContainer){
         for(var s in seriesContainer["seriesList"]){
             addNewSeries(seriesContainer["seriesList"][s]);
         }
     }
+    /// <summary>
+    /// Initializes all the connections needed to correctly communicate with the manager object
+    /// This function has to be called before allowing the user to interact with the ChartView
+    /// </summary>
     function managerAssociation(){
         manager.xBottom = xAxisB;
         manager.yLeft = yAxisL;
@@ -113,23 +89,41 @@ ChartView{
         manager.yLogRight = yLogAxisR;
 
         manager.axisAssigned = true;
-        manager.addingSeries.connect(addNewSeries);
+        manager.addingSeries.connect(addNewSeries);  // The series have to be added via manager object.
+                                                     // When a new series has to be added, a dictionary with the
+                                                     // series features is send to the manager object on python side.
+                                                     // The manager then emits the "addingSeries" signal which brings
+                                                     // the aforementioned dictionary with it.
+                                                     // The signal triggers the "addNewSeries" slot that creates the QML
+                                                     // "series" object, puts it in the input dictionary and sends
+                                                     // everything back to the python side manager.
         manager.cleared.connect(smartClear);
     }
+    /// <summary>
+    /// This function intercepts the "cleared" signal from the manager, removes all the series from the ChartView
+    /// empties the "currentSeries" list and hides all the axis
+    /// </summary>
     function smartClear(){
         for (var s in currentSeries){
             var toRemove = series(currentSeries[s]);
             removeSeries(toRemove);
         }
-        xAxisB.present = false;
-        xAxisT.present = false;
-        xLogAxisB.present = false;
-        xLogAxisT.present = false;
-        yAxisL.present = false;
-        yAxisR.present = false;
-        yLogAxisL.present = false;
-        yLogAxisR.present = false;
+        xAxisB.visible = false;
+        xAxisT.visible = false;
+        xLogAxisB.visible = false;
+        xLogAxisT.visible = false;
+        yAxisL.visible = false;
+        yAxisR.visible = false;
+        yLogAxisL.visible = false;
+        yLogAxisR.visible = false;
         currentSeries = [];
+    }
+    /// <summary>
+    /// Allows to enable or disable autoscaling on all the axes without interacting with the popup menu
+    /// </summary>
+    /// <param name="value">Boolean: The value that will determine the enabling/disabling of the autoscale on all the axes</param>
+    function switchRemoteAutoscale(value){
+        dynamoMenu.allAutoTriggers(value);
     }
 
     ValueAxis{
@@ -137,8 +131,7 @@ ChartView{
         objectName: "bottom"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     ValueAxis{
@@ -146,8 +139,7 @@ ChartView{
         objectName: "left"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     ValueAxis{
@@ -155,8 +147,7 @@ ChartView{
         objectName: "top"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     ValueAxis{
@@ -164,8 +155,7 @@ ChartView{
         objectName: "right"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     LogValueAxis{
@@ -173,8 +163,7 @@ ChartView{
         objectName: "logBottom"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     LogValueAxis{
@@ -182,8 +171,7 @@ ChartView{
         objectName: "logLeft"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     LogValueAxis{
@@ -191,8 +179,7 @@ ChartView{
         objectName: "logTop"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     LogValueAxis{
@@ -200,11 +187,13 @@ ChartView{
         objectName: "logRight"
         min: 0
         max: 100
-        visible: present
-        property bool present: false
+        visible: false
     }
 
     // FAKE SERIES TO VISUALIZE AXIS CORRECTLY - START
+    // This series are needed because if the axes are not explicitely used in a QML AbstractSeries object
+    // as "left", "right", "bottom", or "up", if you create series dynamically, they will appear in the
+    // wrong position (mainly the right and the up axes will just be addictional left and bottom axis)
     LineSeries{
         id: bottomNleft
         name: "bottomNleft"
@@ -247,8 +236,9 @@ ChartView{
         property int oldX: 0
         property int oldY: 0
 
+        // Mouse events connections ----------------------- START //
         onClicked: {
-            if (mouse.button == Qt.RightButton && manager.interactionEnabled && dynamoMouse.menuEnabled) //Commented since it's not compatible with the TestChartMng class
+            if (mouse.button === Qt.RightButton && manager.interactionEnabled && dynamoMouse.menuEnabled)
             {
                 dynamoMenu.popup();
             }
@@ -284,6 +274,12 @@ ChartView{
                 dynamoZoom(-1);
             }
         }
+        // Mouse events connections ------------------------- END //
+        /// <summary>
+        /// It is called when the left mouse button is pressed and held. It changes the shape of the cursor
+        /// and saves the cursors current position. From this moment, and untill the mouse button is released,
+        /// the pan action will be performed on all the axes that allows that
+        /// </summary>
         function grabPlot(){
             if (dynamoMouse.menuEnabled && manager.interactionEnabled){
                 cursorShape = Qt.ClosedHandCursor;
@@ -291,6 +287,13 @@ ChartView{
                 dynamoMouse.oldY = dynamoMouse.mouseY;
             }
         }
+        /// <summary>
+        /// It calls the manager zoom function with a specific verse.
+        /// The verse can be:
+        ///     - 1: Zoom in
+        ///     - -1: Zoom out
+        /// </summary>
+        /// <param name="verse">Integer: It represent the zooming verse</param>
         function dynamoZoom(verse){
             if (dynamoMouse.menuEnabled && manager.interactionEnabled){
                 var toSend = {"verse": verse};
@@ -298,19 +301,48 @@ ChartView{
             }
         }
 
-        Menu {
+        Menu { // This menu manages the interactions between the user and the ChartView
             id: dynamoMenu
             Material.accent: Material.Orange
             Material.primary: Material.BlueGrey
+            // The following three boolean properties are used to avoid triggering
+            // the "checked change" event for each individual menu items when an all"BLANK"Triggers
+            // function is called (e.g. allAutoTriggers, allPanTriggers, allZoomTriggers, etc).
             property bool singleAutoTrigger: true
             property bool singlePanTrigger: true
             property bool singleZoomTrigger: true
-            property bool autoDerived: false
-            property bool zoomDerived: false
-            property bool panDerived: false
+            // The following three boolean properties are used to manage the interactions between
+            // the different actions allowed by the menu.
+            // First the ratio behind these interactions has to be understood:
+            //     1) Enabling autoscale for one axis (or any combination of them) disables zoom and pan for
+            //        the same axis (or the ame combination)
+            //     2) Disabling autoscale for one axis (or any combination of them) enables zoom and pan for
+            //        the same axis (or the ame combination)
+            //     3) Enabling pan for one axis (or any combination of them) disables autoscale for
+            //        the same axis (or the ame combination)
+            //     4) Enabling zoom for one axis (or any combination of them) disables autoscale for
+            //        the same axis (or the ame combination)
+            // So, 2 can lead to 3 and 4 at the same time. This can lead back to 2 and so on.
+            // To avoid this, everytime one of the four aforementioned cases occurs, the correspondent property
+            // is set to true and that prevents the triggered actions to start the loop
+            property bool autoDerived: false  // It is set to true when autoscale is enabled/disabled by the user
+            property bool zoomDerived: false // It is set to true when zooming is enabled by the user
+            property bool panDerived: false // It is set to true when panning is enabled by the user
 
+            /// <summary>
+            ///
+            /// </summary>
+            /// <param name=""></param>
+            /// <param name=""></param>
+            /// <param name=""></param>
+            /// <results></results>
+
+            /// <summary>
+            /// It sets all the autoscale menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the autoscale</param>
             function allAutoTriggers(value){
-                singleAutoTrigger = false;
+                singleAutoTrigger = false;  // Single autoscale-related menu items must not react
                 autoMenuItem.text = value ? "Disable autoscale" : "Enable autoscale";
                 autoXMenuItem.text = value ? "Disable all X" : "Enable all X";
                 autoYMenuItem.text = value ? "Disable all Y" : "Enable all Y";
@@ -332,8 +364,12 @@ ChartView{
                 panXMenuItem.text = !value ? "Disable all X" : "Enable all X";
                 panYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
 
-                singleAutoTrigger = true;
+                singleAutoTrigger = true; // Single autoscale-related menu items can react again
             }
+            /// <summary>
+            /// It sets the X axes autoscale menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the autoscale</param>
             function allXAutoTriggers(value){
                 singleAutoTrigger = false;
                 autoXMenuItem.text = value ? "Disable all X" : "Enable all X";
@@ -349,6 +385,10 @@ ChartView{
 
                 singleAutoTrigger = true;
             }
+            /// <summary>
+            /// It sets the Y axes autoscale menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the autoscale</param>
             function allYAutoTriggers(value){
                 singleAutoTrigger = false;
                 autoYMenuItem.text = value ? "Disable all Y" : "Enable all Y";
@@ -362,6 +402,14 @@ ChartView{
                 panYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleAutoTrigger = true;
             }
+            /// <summary>
+            /// It checks whether or not all the X and Y enabled autoscale menu items
+            /// are checked
+            /// </summary>
+            /// <results>
+            /// List: It contains two boolean values, one for X and one for Y, that are true
+            /// only if all the enabled menu items for that axis are checked
+            /// </results>
             function checkAutoEnabled(){
                 var xOk = true;
                 var yOk = true;
@@ -377,6 +425,10 @@ ChartView{
 
                 return [xOk,yOk];
             }
+            /// <summary>
+            /// Sends the values of the autoscale menu items to the manager and, if needed,
+            /// modify the zoom and pan menu items
+            /// </summary>
             function sendAutoTriggers(){
                 var toSend = {"x":{},"y":{}};
                 toSend["x"][xAxisB.objectName] = autoXBMenuItem.checked;
@@ -395,8 +447,13 @@ ChartView{
                 autoYMenuItem.text = checks[1] ? "Disable all Y" : "Enable all Y";
 
                 manager.setAutoScale(toSend);
-                if(!panDerived && !zoomDerived) autoTriggerToOther();
+                if(!panDerived && !zoomDerived) autoTriggerToOther(); // If this action hasn't been triggered by zoom or pan, then
+                                                                      // it has to influence the values of the zoom and pan menu
+                                                                      // items
             }
+            /// <summary>
+            /// Modify zoom and pan menu items accordingly to the autoscale menu items state
+            /// </summary>
             function autoTriggerToOther(){
                 autoDerived = true;
                 singlePanTrigger = false;
@@ -423,6 +480,10 @@ ChartView{
                 singleZoomTrigger = true;
                 autoDerived = false;
             }
+            /// <summary>
+            /// It sets all the zoom menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the zoom</param>
             function allZoomTriggers(value){
                 singleZoomTrigger = false;
                 zoomMenuItem.text = value ? "Disable zoom" : "Enable zoom";
@@ -443,6 +504,10 @@ ChartView{
                 autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleZoomTrigger = true;
             }
+            /// <summary>
+            /// It sets the X axes zoom menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the zoom</param>
             function allXZoomTriggers(value){
                 singleZoomTrigger = false;
                 zoomXMenuItem.text = value ? "Disable all X" : "Enable all X";
@@ -455,6 +520,10 @@ ChartView{
                 autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
                 singleZoomTrigger = true;
             }
+            /// <summary>
+            /// It sets the Y axes zoom menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the zoom</param>
             function allYZoomTriggers(value){
                 singleZoomTrigger = false;
                 zoomYMenuItem.text = value ? "Disable all Y" : "Enable all Y";
@@ -467,6 +536,14 @@ ChartView{
                 autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singleZoomTrigger = true;
             }
+            /// <summary>
+            /// It checks whether or not all the X and Y enabled zoom menu items
+            /// are checked
+            /// </summary>
+            /// <results>
+            /// List: It contains two boolean values, one for X and one for Y, that are true
+            /// only if all the enabled menu items for that axis are checked
+            /// </results>
             function checkZoomEnabled(){
                 var xOk = true;
                 var yOk = true;
@@ -482,6 +559,10 @@ ChartView{
 
                 return [xOk,yOk];
             }
+            /// <summary>
+            /// Sends the values of the zoom menu items to the manager and, if needed,
+            /// modify the autoscale menu items
+            /// </summary>
             function sendZoomTriggers(){
                 var toSend = {"x":{},"y":{}};
                 toSend["x"][xAxisB.objectName] = zoomXBMenuItem.checked;
@@ -502,6 +583,9 @@ ChartView{
                 manager.setZoomAllowed(toSend);
                 if (!autoDerived) zoomToAuto();
             }
+            /// <summary>
+            /// Modify autoscale menu items accordingly to the zoom menu items state
+            /// </summary>
             function zoomToAuto(){
                 zoomDerived = true;
                 singleAutoTrigger = false;
@@ -533,6 +617,10 @@ ChartView{
                 sendAutoTriggers();
                 zoomDerived = false;
             }
+            /// <summary>
+            /// It sets all the pan menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the pan</param>
             function allPanTriggers(value){
                 singlePanTrigger = false;
                 panMenuItem.text = value ? "Disable pan" : "Enable pan";
@@ -553,6 +641,10 @@ ChartView{
                 autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singlePanTrigger = true;
             }
+            /// <summary>
+            /// It sets the X axes pan menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the pan</param>
             function allXPanTriggers(value){
                 singlePanTrigger = false;
                 panXMenuItem.text = value ? "Disable all X" : "Enable all X";
@@ -565,6 +657,10 @@ ChartView{
                 autoXMenuItem.text = !value ? "Disable all X" : "Enable all X";
                 singlePanTrigger = true;
             }
+            /// <summary>
+            /// It sets the Y axes pan menu items to the input value
+            /// </summary>
+            /// <param name="value">Boolean: Tells wether enable or disable the pan</param>
             function allYPanTriggers(value){
                 singlePanTrigger = false;
                 panYMenuItem.text = value ? "Disable all Y" : "Enable all Y";
@@ -577,6 +673,14 @@ ChartView{
                 autoYMenuItem.text = !value ? "Disable all Y" : "Enable all Y";
                 singlePanTrigger = true;
             }
+            /// <summary>
+            /// It checks whether or not all the X and Y enabled pan menu items
+            /// are checked
+            /// </summary>
+            /// <results>
+            /// List: It contains two boolean values, one for X and one for Y, that are true
+            /// only if all the enabled menu items for that axis are checked
+            /// </results>
             function checkPanEnabled(){
                 var xOk = true;
                 var yOk = true;
@@ -592,6 +696,10 @@ ChartView{
 
                 return [xOk,yOk];
             }
+            /// <summary>
+            /// Sends the values of the pan menu items to the manager and, if needed,
+            /// modify the autoscale menu items
+            /// </summary>
             function sendPanTriggers(){
                 var toSend = {"x":{},"y":{}};
                 toSend["x"][xAxisB.objectName] = panXBMenuItem.checked;
@@ -612,6 +720,9 @@ ChartView{
                 manager.setPanAllowed(toSend);
                 if (!autoDerived) panToAuto();
             }
+            /// <summary>
+            /// Modify autoscale menu items accordingly to the pan menu items state
+            /// </summary>
             function panToAuto(){
                 panDerived = true;
                 singleAutoTrigger = false;
@@ -677,7 +788,7 @@ ChartView{
                         text: "Linear X bottom"
                         checkable: true
                         checked: false
-                        enabled: xAxisB.present
+                        enabled: xAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -690,7 +801,7 @@ ChartView{
                         text: "Linear X top"
                         checkable: true
                         checked: false
-                        enabled: xAxisT.present
+                        enabled: xAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -703,7 +814,7 @@ ChartView{
                         text: "Log X bottom"
                         checkable: true
                         checked: false
-                        enabled: xLogAxisB.present
+                        enabled: xLogAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -716,7 +827,7 @@ ChartView{
                         text: "Log X top"
                         checkable: true
                         checked: false
-                        enabled: xLogAxisT.present
+                        enabled: xLogAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -744,7 +855,7 @@ ChartView{
                         text: "Linear Y left"
                         checkable: true
                         checked: false
-                        enabled: yAxisL.present
+                        enabled: yAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -757,7 +868,7 @@ ChartView{
                         text: "Linear Y right"
                         checkable: true
                         checked: false
-                        enabled: yAxisR.present
+                        enabled: yAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -770,7 +881,7 @@ ChartView{
                         text: "Log Y Left"
                         checkable: true
                         checked: false
-                        enabled: yLogAxisL.present
+                        enabled: yLogAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -783,7 +894,7 @@ ChartView{
                         text: "Log Y right"
                         checkable: true
                         checked: false
-                        enabled: yLogAxisR.present
+                        enabled: yLogAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleAutoTrigger){
                                 dynamoMenu.sendAutoTriggers();
@@ -826,7 +937,7 @@ ChartView{
                         text: "Linear X bottom"
                         checkable: true
                         checked: true
-                        enabled: xAxisB.present
+                        enabled: xAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -839,7 +950,7 @@ ChartView{
                         text: "Linear X top"
                         checkable: true
                         checked: true
-                        enabled: xAxisT.present
+                        enabled: xAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -852,7 +963,7 @@ ChartView{
                         text: "Log X bottom"
                         checkable: true
                         checked: true
-                        enabled: xLogAxisB.present
+                        enabled: xLogAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -865,7 +976,7 @@ ChartView{
                         text: "Log X top"
                         checkable: true
                         checked: true
-                        enabled: xLogAxisT.present
+                        enabled: xLogAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -893,7 +1004,7 @@ ChartView{
                         text: "Linear Y left"
                         checkable: true
                         checked: true
-                        enabled: yAxisL.present
+                        enabled: yAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -906,7 +1017,7 @@ ChartView{
                         text: "Linear Y right"
                         checkable: true
                         checked: true
-                        enabled: yAxisR.present
+                        enabled: yAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -919,7 +1030,7 @@ ChartView{
                         text: "Log Y Left"
                         checkable: true
                         checked: true
-                        enabled: yLogAxisL.present
+                        enabled: yLogAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -932,7 +1043,7 @@ ChartView{
                         text: "Log Y right"
                         checkable: true
                         checked: true
-                        enabled: yLogAxisR.present
+                        enabled: yLogAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singleZoomTrigger){
                                 dynamoMenu.sendZoomTriggers();
@@ -975,7 +1086,7 @@ ChartView{
                         text: "Linear X bottom"
                         checkable: true
                         checked: true
-                        enabled: xAxisB.present
+                        enabled: xAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -988,7 +1099,7 @@ ChartView{
                         text: "Linear X top"
                         checkable: true
                         checked: true
-                        enabled: xAxisT.present
+                        enabled: xAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1001,7 +1112,7 @@ ChartView{
                         text: "Log X bottom"
                         checkable: true
                         checked: true
-                        enabled: xLogAxisB.present
+                        enabled: xLogAxisB.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1014,7 +1125,7 @@ ChartView{
                         text: "Log X top"
                         checkable: true
                         checked: true
-                        enabled: xLogAxisT.present
+                        enabled: xLogAxisT.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1040,7 +1151,7 @@ ChartView{
                         text: "Linear Y left"
                         checkable: true
                         checked: true
-                        enabled: yAxisL.present
+                        enabled: yAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1053,7 +1164,7 @@ ChartView{
                         text: "Linear Y right"
                         checkable: true
                         checked: true
-                        enabled: yAxisR.present
+                        enabled: yAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1066,7 +1177,7 @@ ChartView{
                         text: "Log Y Left"
                         checkable: true
                         checked: true
-                        enabled: yLogAxisL.present
+                        enabled: yLogAxisL.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1079,7 +1190,7 @@ ChartView{
                         text: "Log Y right"
                         checkable: true
                         checked: true
-                        enabled: yLogAxisR.present
+                        enabled: yLogAxisR.visible
                         onCheckedChanged: function(){
                             if (dynamoMenu.singlePanTrigger){
                                 dynamoMenu.sendPanTriggers();
@@ -1096,7 +1207,7 @@ ChartView{
                 text: "Set as default zoom"
 
                 onTriggered: {
-                    manager.fixAllAxes();
+                    manager.fixAllAxes();  // Sets the current axes ranges as default
                 }
             }
         }
